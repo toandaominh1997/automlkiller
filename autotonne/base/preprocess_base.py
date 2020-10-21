@@ -9,4 +9,7 @@ class PreprocessBase(ABC):
     @abstractmethod
     def transform(self):
         raise NotImplementedError()
+    @abstractmethod
+    def fit_transform(self):
+        raise NotImplementedError()
 
