@@ -2,7 +2,20 @@ version: 2.1
 jobs:
   build:
     working_directory: ~/root
-    docker: cimg/python:3.9.0
+    docker:
+      - image: cimg/python:3.9.0
     steps:
         - checkout
         - run: python --version
+        - run:
+          name: install all package
+          command: |
+              pip install -r requirements.txt
+        - run:
+          name: test logic
+          command: |
+              python3 test.py
+        - run:
+          name: test preprocessing
+          command: |
+              python3 autotonne/preproces/preprocess.py
