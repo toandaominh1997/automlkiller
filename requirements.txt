@@ -1,1 +1,7 @@
-pytoan
+numpy
+pandas
+scikit-learn
+pyod
+category-encoders
+torch
+tensorflow

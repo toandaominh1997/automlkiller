@@ -171,7 +171,12 @@ class Outlier(BaseEstimator, TransformerMixin):
         for out in self.outlier:
             X['vote_outlier'] += out.predict(X.drop(columns=['vote_outlier']))
         print('Remove outlier: {} rows'.format((X['vote_outlier']==len(self.methods)).sum()))
-        return X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
+        if y is not None:
+            y = y.loc[X['vote_outlier']!=len(self.methods)]
+            X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
+            return X, y
+        X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
+        return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
@@ -265,11 +270,11 @@ def test(dataset, y):
     dataset = ReduceCategoricalWithCount(categorical_columns=['Jumps']).fit_transform(dataset)
     print('Done reducecategorywithcount')
     print(dataset)
-    # print('Start Outlier ...')
-    # dataset = Outlier().fit_transform(dataset)
-    # print('Done Outlier')
+    print('Start Outlier ...')
+    dataset, y = Outlier().fit_transform(dataset, y)
+    print('Done Outlier')
 
-    kaka = RecursiveFeatureElimination(estimator=sklearn.ensemble.RandomForestClassifier(), min_features_to_select=3).fit(dataset, y)
+    kaka = RecursiveFeatureElimination(estimator=sklearn.ensemble.RandomForestClassifier(), min_features_to_select=3, cv=3).fit(dataset, y)
     print('selector: ',  kaka.get_support())
     print('Start RecursiveFeatureElimination ...')
     dataset = RecursiveFeatureElimination(estimator=sklearn.ensemble.RandomForestClassifier()).fit_transform(dataset, y)
