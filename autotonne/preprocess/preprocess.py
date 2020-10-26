@@ -18,6 +18,7 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
         self.categorical_imputer = sklearn.impute.SimpleImputer(strategy=categorical_strategy, fill_value=fill_value_categorical)
 
     def fit(self, X, y = None):
+        print('FIT SIMPLE IMPUTER')
         X = X.copy()
         self.numeric_columns = X.select_dtypes(include=[np.number]).columns
         self.categorical_columns = X.select_dtypes(include=['object', 'category']).columns
@@ -96,6 +97,7 @@ class Binning(BaseEstimator, TransformerMixin):
         self.features_to_discretize = features_to_discretize
         self.binns = []
     def fit(self, X, y = None):
+        print('FIT BINNING')
         X = X.copy()
         if len(self.features_to_discretize) > 0:
             for col in self.features_to_discretize:
@@ -116,6 +118,7 @@ class Scaling(BaseEstimator, TransformerMixin):
         self.method = method
         self.numeric_columns = numeric_columns
     def fit(self, X, y = None):
+        print('FIT SCALING')
         X = X.copy()
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return self
@@ -146,11 +149,12 @@ class Scaling(BaseEstimator, TransformerMixin):
         return self.transform(X, y)
 
 class Outlier(BaseEstimator, TransformerMixin):
-    def __init__(self, contamination = 0.2, random_state = 42, methods = ['knn', 'iforest', 'pca'], verbose = True):
+    def __init__(self, methods = ['knn', 'iforest', 'pca'], contamination = 0.2, random_state = 42,  verbose = True):
         self.contamination = contamination
         self.random_state = random_state
         self.methods = methods
     def fit(self, X, y = None):
+        print('FIT OUTLIER')
         X = X.copy()
         self.outlier = []
         if "knn" in self.methods:
@@ -167,14 +171,13 @@ class Outlier(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         X = X.copy()
         X['vote_outlier'] = 0
-        print(X)
         for out in self.outlier:
             X['vote_outlier'] += out.predict(X.drop(columns=['vote_outlier']))
         print('Remove outlier: {} rows'.format((X['vote_outlier']==len(self.methods)).sum()))
         if y is not None:
             y = y.loc[X['vote_outlier']!=len(self.methods)]
             X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
-            return X, y
+            return X
         X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
         return X
     def fit_transform(self, X, y = None):
@@ -186,6 +189,7 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
                  categorical_columns=[]):
         self.categorical_columns = categorical_columns
     def fit(self, X, y = None):
+        print('FIT REDUCE')
         X = X.copy()
         self.data_count = {}
         for col in self.categorical_columns:
@@ -216,7 +220,8 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
         return self
     def transform(self, X, y = None):
         X = X.copy()
-        return self.selector.transform(X)
+        X = X.loc[:, self.selector.support_]
+        return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X)
@@ -234,6 +239,7 @@ class ReduceDimensionForSupervised(BaseEstimator, TransformerMixin):
         self.n_components = n_components
         self.random_state = random_state
     def fit(self, X, y = None):
+        print('FIT REDUCE')
         X = X.copy()
         if self.method == 'pca_linear':
             self.model = sklearn.decomposition.PCA(self.n_components, random_state=self.random_state).fit(X)
@@ -286,6 +292,7 @@ def test(dataset, y):
     print('dataset: ', dataset)
 if __name__=='__main__':
     X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)
+
     print(y['Waist'])
     test(X, y['Waist'])
     # from sklearn.pipeline import Pipeline

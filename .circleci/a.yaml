@@ -1,0 +1,17 @@
+model:
+  rulebase: []
+SEED: 56
+
+active:
+  SEED: 42
+  model:
+    xgb: 
+pro:
+  model:
+    gbm: [2, 454,433234]
+rulebase:
+  model:
+loyal:
+  model:
+    lr: [21342312]
+
