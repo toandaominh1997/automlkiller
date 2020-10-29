@@ -5,6 +5,8 @@ import pandas as pd
 from sklearn.datasets import make_classification
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
+
+from preprocessor import Preprocess
 from models.model_factory import ModelFactory
 from models.classification import *
 class Classification(object):
@@ -26,6 +28,9 @@ class Classification(object):
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
         X = self.data.drop(columns=[self.target])
         y = self.data[self.target]
+        X, y = Preprocess().fit_transform(X, y)
+        X = pd.DataFrame(X)
+        y = pd.DataFrame(y)
         models = []
         scores = {}
         for name_model in ModelFactory.name_registry:
@@ -44,12 +49,11 @@ class Classification(object):
                 for key, value in scores[name_model].items():
                     scores[name_model][key] = np.mean(value)
         print('scores: ', scores)
-                
+
 
 
 if __name__=='__main__':
     X, y = make_classification(n_samples=10000, n_features=50)
     data = pd.DataFrame(X)
     data['target'] = y
-    print(data)
     Classification(data = data, target='target').compare_models(n_splits=5)

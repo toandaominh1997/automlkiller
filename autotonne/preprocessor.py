@@ -33,7 +33,7 @@ class Preprocess(object):
                 rfe_min_features_to_select = 3,
                 rfe_cv = 3,
 
-                reducedimension = True,
+                reducedimension = False,
                 reducedimension_method = "pca_linear",
                 reducedimension_n_components = 0.99,
                 random_state = 42,
@@ -82,7 +82,7 @@ class Preprocess(object):
                 continue
             preprocess_param.pop('flag')
             name_registry = '-'.join(['preprocess', name_registry])
-            print(name_registry)
+            LOGGER.info('preprocess registry {}'.format(name_registry))
             preprocess_object = PreprocessFactory.create_executor(name = name_registry,
                                                                   **preprocess_param)
             self.preprocess_objs.append(preprocess_object)
@@ -94,7 +94,6 @@ class Preprocess(object):
     def transform(self, X, y = None, **fit_params):
         data = X, y
         for obj in self.preprocess_objs:
-            print(obj)
             data = obj.transform(*data)
         if data[1] is None:
             return data[0]
