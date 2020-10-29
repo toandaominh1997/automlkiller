@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 from imblearn.pipeline import Pipeline
-# from utils.logging import getLogger
+from utils import LOGGER
 import warnings
 from preprocess.preprocess import *
 from preprocess.preprocee_factory import PreprocessFactory
@@ -12,19 +12,7 @@ warnings.filterwarnings('ignore')
 
 class Preprocess(object):
     def __init__(self,
-                data: pd.DataFrame,
-                target: str = None,
-                 ):
-        super(Preprocess, self).__init__()
-        self.params = None
-    def fit(self, X, y = None, **fit_params):
-
-        self.pipe.fit(X, y)
-    def predict(X, y = None, **fit_params):
-        self.pipe.predict(X, y, **fit_params)
-
-    def process(self,
-                imputer = 'simple',
+                imputer = True,
                 imputer_numeric_strategy = "mean",
                 imputer_categorical_strategy = "most_frequent",
 
@@ -39,107 +27,86 @@ class Preprocess(object):
                 outlier_method = ['pca', 'iforest', 'knn'],
                 outlier_contamination = 0.2,
 
-                rfe = True,
+                rfe = False,
                 rfe_estimator = None,
                 rfe_step = 1,
                 rfe_min_features_to_select = 3,
                 rfe_cv = 3,
 
-                reduce = True,
-                reduce_method = "pca_linear",
-                reduce_n_components = 0.99,
+                reducedimension = True,
+                reducedimension_method = "pca_linear",
+                reducedimension_n_components = 0.99,
                 random_state = 42,
                 n_jobs = -1,
-                ):
-        params = {
+                 ):
+        super(Preprocess, self).__init__()
+        self.params = {
             'simpleimputer': {
+                'flag': imputer,
                 'numeric_strategy': imputer_numeric_strategy,
                 'categorical_strategy': imputer_categorical_strategy
             },
             'categoryencoder': {
+                'flag': False
             },
             'binning': {
+                'flag': binning,
                 'features_to_discretize': binning_features_to_discretize
             },
             'scaling': {
+                'flag': scaling,
                 'method': scaling_method,
                 'numeric_columns': scaling_numeric_columns
             },
             'outlier': {
-                'method': outlier_method,
+                'flag': outlier,
+                'methods': outlier_method,
                 'contamination': outlier_contamination
             },
             'rfe': {
+                'flag': rfe,
                 'estimator': rfe_estimator,
                 'step': rfe_step,
                 'min_features_to_select': rfe_min_features_to_select,
                 'cv': rfe_cv
             },
-            'reduce': {
-                'method': reduce_method,
-                'n_components': reduce_n_components
+            'reducedimension': {
+                'flag': reducedimension,
+                'method': reducedimension_method,
+                'n_components': reducedimension_n_components
             }
         }
-        pipe = []
+        self.preprocess_objs = []
+        for name_registry, preprocess_param in self.params.items():
+            if preprocess_param['flag'] == False or preprocess_param['flag'] is None:
+                continue
+            preprocess_param.pop('flag')
+            name_registry = '-'.join(['preprocess', name_registry])
+            print(name_registry)
+            preprocess_object = PreprocessFactory.create_executor(name = name_registry,
+                                                                  **preprocess_param)
+            self.preprocess_objs.append(preprocess_object)
 
-        imuter = None
-        if  imputer== 'simple':
-            imputer = SimpleImputer(
-                numeric_strategy = imputer_numeric_strategy,
-                categorical_strategy = imputer_numeric_strategy,
-            )
-        if imputer is not None:
-            pipe.append({'imputer': imputer})
+    def fit(self, X, y = None, **fit_params):
+        for obj in self.preprocess_objs:
+            obj.fit(X, y)
 
-        bn = None
-        if binning == True:
-            bn = Binning(features_to_discretize=binning_features_to_discretize)
-        if bn is not None:
-            pipe.append({'binning', bn})
-
-        scale = None
-        if scaling_method is not None:
-            scale = Scaling(method = scaling_method)
-
-        if scale is not None:
-            pipe.append(('scaling', scale))
-
-        outlier_model = None
-        if outlier==True:
-            outlier_model = Outlier(methods = outlier_method,
-                           contamination = outlier_contamination,
-                           random_state = random_state,
-                           )
-
-        if outlier_model is not None:
-            pipe.append(('outlier', outlier_model))
-
-        rfe_model = None
-        if rfe == True:
-            rfe_model = RecursiveFeatureElimination(
-                estimator = sklearn.ensemble.RandomForestClassifier(),
-                step = rfe_step,
-                min_features_to_select = rfe_min_features_to_select,
-                cv = rfe_cv
-            )
-        if rfe_model is not None:
-            pipe.append(('rfe', rfe_model))
-
-        reduce_model = None
-        if reduce == True:
-            reduce_model = ReduceDimension(
-                method = reduce_method,
-                n_components = reduce_n_components,
-                random_state = random_state
-            )
-        if reduce_model is not None:
-            pipe.append(('reduce', reduce_model))
-        self.pipe = Pipeline(pipe)
-        return self.pipe
+    def transform(self, X, y = None, **fit_params):
+        data = X, y
+        for obj in self.preprocess_objs:
+            print(obj)
+            data = obj.transform(*data)
+        if data[1] is None:
+            return data[0]
+        return data
+    def fit_transform(self, X, y = None):
+        self.fit(X, y)
+        return self.transform(X, y)
 
 if __name__=='__main__':
     X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)
-    Preprocess(target = 'target').process().fit_transform(X, y['Waist'])
+    data = Preprocess().fit_transform(X)
+    print(data)
 
 
 

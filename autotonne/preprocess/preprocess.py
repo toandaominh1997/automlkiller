@@ -11,6 +11,7 @@ import pyod.models.pca
 import category_encoders as ce
 
 from preprocess.preprocee_factory import PreprocessFactory
+from utils.logger import LOGGER
 
 @PreprocessFactory.register('preprocess-simpleimputer')
 class SimpleImputer(BaseEstimator, TransformerMixin):
@@ -22,7 +23,7 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
         self.categorical_imputer = sklearn.impute.SimpleImputer(strategy=categorical_strategy, fill_value=fill_value_categorical)
 
     def fit(self, X, y = None):
-        print('FIT SIMPLE IMPUTER')
+        LOGGER.info('FIT SIMPLE IMPUTER')
         X = X.copy()
         self.numeric_columns = X.select_dtypes(include=[np.number]).columns
         self.categorical_columns = X.select_dtypes(include=['object', 'category']).columns
@@ -48,9 +49,7 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
         if not self.time_columns.empty:
             for idx, col in enumerate(self.time_columns):
                 X[col].fillna(self.most_frequent_time[idx])
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         X = X.copy()
         self.fit(X, y)
@@ -58,7 +57,7 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
 
 @PreprocessFactory.register('preprocess-categoryencoder')
 class CategoryEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self, cols = None, method='onehotencoding'):
+    def __init__(self, cols = None, method='onehotencoder'):
         if method == 'backwarddifferenceencoder':
             self.encoder = ce.BackwardDifferenceEncoder(cols=cols, return_df=True)
         elif method == 'baseencoder':
@@ -97,9 +96,7 @@ class CategoryEncoder(BaseEstimator, TransformerMixin):
         self.encoder.fit(X, y)
     def transform(self, X, y = None):
         X = self.encoder.transform(X)
-        if y is not None:
-            return X, y
-        return X
+        return X, y
 
 @PreprocessFactory.register('preprocess-binning')
 class Binning(BaseEstimator, TransformerMixin):
@@ -107,7 +104,7 @@ class Binning(BaseEstimator, TransformerMixin):
         self.features_to_discretize = features_to_discretize
         self.binns = []
     def fit(self, X, y = None):
-        print('FIT BINNING')
+        LOGGER.info('FIT BINNING')
         X = X.copy()
         if len(self.features_to_discretize) > 0:
             for col in self.features_to_discretize:
@@ -122,9 +119,7 @@ class Binning(BaseEstimator, TransformerMixin):
         if len(self.features_to_discretize) > 0:
             X[self.features_to_discretize] = self.disc.transform(X[self.features_to_discretize])
 
-        if y is not None:
-            return X, y
-        return X
+        return X, y
 
 @PreprocessFactory.register('preprocess-scaling')
 class Scaling(BaseEstimator, TransformerMixin):
@@ -132,7 +127,7 @@ class Scaling(BaseEstimator, TransformerMixin):
         self.method = method
         self.numeric_columns = numeric_columns
     def fit(self, X, y = None):
-        print('FIT SCALING')
+        LOGGER.info('FIT SCALING')
         X = X.copy()
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return self
@@ -157,9 +152,7 @@ class Scaling(BaseEstimator, TransformerMixin):
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return X
         X[self.numeric_columns] = self.scale.transform(X)
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
@@ -171,7 +164,7 @@ class Outlier(BaseEstimator, TransformerMixin):
         self.random_state = random_state
         self.methods = methods
     def fit(self, X, y = None):
-        print('FIT OUTLIER')
+        LOGGER.info('FIT OUTLIER')
         X = X.copy()
         self.outlier = []
         if "knn" in self.methods:
@@ -194,9 +187,7 @@ class Outlier(BaseEstimator, TransformerMixin):
         if y is not None:
             y = y.loc[X['vote_outlier']!=len(self.methods)]
         X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
@@ -207,7 +198,7 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
                  categorical_columns=[]):
         self.categorical_columns = categorical_columns
     def fit(self, X, y = None):
-        print('FIT REDUCE')
+        LOGGER.info('FIT REDUCE')
         X = X.copy()
         self.data_count = {}
         for col in self.categorical_columns:
@@ -217,9 +208,7 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         for col in self.categorical_columns:
             X[col].replace(self.data_count[col].keys(), self.data_count[col].values(), inplace=True)
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
@@ -242,9 +231,7 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         X = X.copy()
         X = X.loc[:, self.selector.support_]
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X)
@@ -263,7 +250,7 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
         self.n_components = n_components
         self.random_state = random_state
     def fit(self, X, y = None):
-        print('FIT REDUCE')
+        LOGGER.info('FIT REDUCE')
         X = X.copy()
         if self.method == 'pca_linear':
             self.model = sklearn.decomposition.PCA(self.n_components, random_state=self.random_state).fit(X)
@@ -277,13 +264,11 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         X = X.copy()
         X = self.model.transform(X)
-        if y is not None:
-            return X, y
-        return X
+        return X, y
     def fit_transform(self, X, y = None):
         X = X.copy()
-        self.fit(X)
-        return self.transform(X)
+        self.fit(X, y)
+        return self.transform(X, y)
 
 def test(dataset, y):
     print(dataset.info())
@@ -318,13 +303,7 @@ def test(dataset, y):
     print('Done ReduceDimensionForSupervised')
     print('dataset: ', dataset)
 if __name__=='__main__':
-    X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)
-
-    print(y['Waist'])
-    test(X, y['Waist'])
-    # from sklearn.pipeline import Pipeline
-
-    # pipe = Pipeline(['impute': SimpleImputer()])
+    pass
 
 
 
