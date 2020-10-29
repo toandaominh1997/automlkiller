@@ -2,18 +2,23 @@ from enum import Enum, auto
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 # from utils.logging import getLogger
 import warnings
 from preprocess.preprocess import *
+from preprocess.preprocee_factory import PreprocessFactory
 
 warnings.filterwarnings('ignore')
 
 class Preprocess(object):
     def __init__(self,
+                data: pd.DataFrame,
+                target: str = None,
                  ):
         super(Preprocess, self).__init__()
-    def fit(self, X, y = None):
+        self.params = None
+    def fit(self, X, y = None, **fit_params):
+
         self.pipe.fit(X, y)
     def predict(X, y = None, **fit_params):
         self.pipe.predict(X, y, **fit_params)
@@ -46,6 +51,35 @@ class Preprocess(object):
                 random_state = 42,
                 n_jobs = -1,
                 ):
+        params = {
+            'simpleimputer': {
+                'numeric_strategy': imputer_numeric_strategy,
+                'categorical_strategy': imputer_categorical_strategy
+            },
+            'categoryencoder': {
+            },
+            'binning': {
+                'features_to_discretize': binning_features_to_discretize
+            },
+            'scaling': {
+                'method': scaling_method,
+                'numeric_columns': scaling_numeric_columns
+            },
+            'outlier': {
+                'method': outlier_method,
+                'contamination': outlier_contamination
+            },
+            'rfe': {
+                'estimator': rfe_estimator,
+                'step': rfe_step,
+                'min_features_to_select': rfe_min_features_to_select,
+                'cv': rfe_cv
+            },
+            'reduce': {
+                'method': reduce_method,
+                'n_components': reduce_n_components
+            }
+        }
         pipe = []
 
         imuter = None
@@ -55,13 +89,13 @@ class Preprocess(object):
                 categorical_strategy = imputer_numeric_strategy,
             )
         if imputer is not None:
-            pipe.append(('imputer', imputer))
+            pipe.append({'imputer': imputer})
 
         bn = None
         if binning == True:
             bn = Binning(features_to_discretize=binning_features_to_discretize)
         if bn is not None:
-            pipe.append(('binning', bn))
+            pipe.append({'binning', bn})
 
         scale = None
         if scaling_method is not None:
@@ -93,7 +127,7 @@ class Preprocess(object):
 
         reduce_model = None
         if reduce == True:
-            reduce_model = ReduceDimensionForSupervised(
+            reduce_model = ReduceDimension(
                 method = reduce_method,
                 n_components = reduce_n_components,
                 random_state = random_state
@@ -105,7 +139,7 @@ class Preprocess(object):
 
 if __name__=='__main__':
     X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)
-    Preprocess().process().fit_transform(X, y['Waist'])
+    Preprocess(target = 'target').process().fit_transform(X, y['Waist'])
 
 
 

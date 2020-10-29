@@ -9,6 +9,10 @@ import pyod.models.knn
 import pyod.models.iforest
 import pyod.models.pca
 import category_encoders as ce
+
+from preprocess.preprocee_factory import PreprocessFactory
+
+@PreprocessFactory.register('preprocess-simpleimputer')
 class SimpleImputer(BaseEstimator, TransformerMixin):
     def __init__(self, numeric_strategy,
                  categorical_strategy,
@@ -44,13 +48,15 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
         if not self.time_columns.empty:
             for idx, col in enumerate(self.time_columns):
                 X[col].fillna(self.most_frequent_time[idx])
-
-
+        if y is not None:
+            return X, y
         return X
     def fit_transform(self, X, y = None):
         X = X.copy()
         self.fit(X, y)
         return self.transform(X, y)
+
+@PreprocessFactory.register('preprocess-categoryencoder')
 class CategoryEncoder(BaseEstimator, TransformerMixin):
     def __init__(self, cols = None, method='onehotencoding'):
         if method == 'backwarddifferenceencoder':
@@ -90,8 +96,12 @@ class CategoryEncoder(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         self.encoder.fit(X, y)
     def transform(self, X, y = None):
-        return self.encoder.transform(X)
+        X = self.encoder.transform(X)
+        if y is not None:
+            return X, y
+        return X
 
+@PreprocessFactory.register('preprocess-binning')
 class Binning(BaseEstimator, TransformerMixin):
     def __init__(self, features_to_discretize):
         self.features_to_discretize = features_to_discretize
@@ -111,8 +121,12 @@ class Binning(BaseEstimator, TransformerMixin):
         X = X.copy()
         if len(self.features_to_discretize) > 0:
             X[self.features_to_discretize] = self.disc.transform(X[self.features_to_discretize])
+
+        if y is not None:
+            return X, y
         return X
 
+@PreprocessFactory.register('preprocess-scaling')
 class Scaling(BaseEstimator, TransformerMixin):
     def __init__(self, numeric_columns = 'not_available', method = 'zscore'):
         self.method = method
@@ -143,11 +157,14 @@ class Scaling(BaseEstimator, TransformerMixin):
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return X
         X[self.numeric_columns] = self.scale.transform(X)
+        if y is not None:
+            return X, y
         return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
 
+@PreprocessFactory.register('preprocess-outlier')
 class Outlier(BaseEstimator, TransformerMixin):
     def __init__(self, methods = ['knn', 'iforest', 'pca'], contamination = 0.2, random_state = 42,  verbose = True):
         self.contamination = contamination
@@ -176,14 +193,15 @@ class Outlier(BaseEstimator, TransformerMixin):
         print('Remove outlier: {} rows'.format((X['vote_outlier']==len(self.methods)).sum()))
         if y is not None:
             y = y.loc[X['vote_outlier']!=len(self.methods)]
-            X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
-            return X
         X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
+        if y is not None:
+            return X, y
         return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
 
+@PreprocessFactory.register('preprocess-reducecategorywithcount')
 class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
     def __init__(self,
                  categorical_columns=[]):
@@ -199,11 +217,14 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         for col in self.categorical_columns:
             X[col].replace(self.data_count[col].keys(), self.data_count[col].values(), inplace=True)
+        if y is not None:
+            return X, y
         return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
 
+@PreprocessFactory.register('preprocess-rfe')
 class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
     def __init__(self,
                  estimator = None,
@@ -221,6 +242,8 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         X = X.copy()
         X = X.loc[:, self.selector.support_]
+        if y is not None:
+            return X, y
         return X
     def fit_transform(self, X, y = None):
         self.fit(X, y)
@@ -230,7 +253,8 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
     def get_ranking(self):
         return self.selector.ranking_
 
-class ReduceDimensionForSupervised(BaseEstimator, TransformerMixin):
+@PreprocessFactory.register('preprocess-reducedimension')
+class ReduceDimension(BaseEstimator, TransformerMixin):
     def __init__(self,
                  method = 'pca_linear',
                  n_components = 0.99,
@@ -252,7 +276,10 @@ class ReduceDimensionForSupervised(BaseEstimator, TransformerMixin):
         return self
     def transform(self, X, y = None):
         X = X.copy()
-        return self.model.transform(X)
+        X = self.model.transform(X)
+        if y is not None:
+            return X, y
+        return X
     def fit_transform(self, X, y = None):
         X = X.copy()
         self.fit(X)
