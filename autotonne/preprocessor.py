@@ -13,6 +13,10 @@ class Preprocess(object):
                 imputer_numeric_strategy = "mean",
                 imputer_categorical_strategy = "most_frequent",
 
+                categoryencoder = True,
+                categoryencoder_cols = [],
+                categoryencoder_method = 'onehotencoder',
+
                 binning = False,
                 binning_features_to_discretize= [],
 
@@ -20,7 +24,7 @@ class Preprocess(object):
                 scaling_method = 'zscore',
                 scaling_numeric_columns = [],
 
-                outlier = False,
+                outlier = True,
                 outlier_method = ['pca', 'iforest', 'knn'],
                 outlier_contamination = 0.2,
 
@@ -44,7 +48,9 @@ class Preprocess(object):
                 'categorical_strategy': imputer_categorical_strategy
             },
             'categoryencoder': {
-                'flag': False
+                'flag': categoryencoder,
+                'cols': categoryencoder_cols,
+                'method': categoryencoder_method
             },
             'binning': {
                 'flag': binning,

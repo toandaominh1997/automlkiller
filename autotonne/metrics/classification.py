@@ -13,24 +13,42 @@ class ClassificationMetricContainer():
 
         if 'recall' not in self.report.keys():
             self.report['recall'] = []
-        self.report['recall'].append(metrics.recall_score(y_true, y_pred))
+        try:
+            self.report['recall'].append(metrics.recall_score(y_true, y_pred))
+        except:
+            pass
         if 'precision' not in self.report.keys():
             self.report['precision'] = []
-        self.report['precision'].append(metrics.precision_score(y_true, y_pred))
+        try:
+            self.report['precision'].append(metrics.precision_score(y_true, y_pred))
+        except:
+            pass
         if 'f1_score' not in self.report.keys():
             self.report['f1_score'] = []
-        self.report['f1_score'].append(metrics.f1_score(y_true, y_pred))
+        try: 
+            self.report['f1_score'].append(metrics.f1_score(y_true, y_pred))
+        except:
+            pass
         if 'cohen_kappa' not in self.report.keys():
             self.report['cohen_kappa'] = []
-        self.report['cohen_kappa'].append(metrics.cohen_kappa_score(y_true, y_pred))
+        try:
+            self.report['cohen_kappa'].append(metrics.cohen_kappa_score(y_true, y_pred))
+        except:
+            pass
 
         if 'mcc' not in self.report.keys():
             self.report['mcc'] = []
-        self.report['mcc'].append(metrics.matthews_corrcoef(y_true, y_pred))
+        try:
+            self.report['mcc'].append(metrics.matthews_corrcoef(y_true, y_pred))
+        except:
+            pass
     def classification_report_proba(self, y_true, y_pred_proba):
         if 'auc' not in self.report.keys():
             self.report['auc'] = []
-        self.report['auc'].append(metrics.roc_auc_score(y_true, y_pred_proba))
+        try:
+            self.report['auc'].append(metrics.roc_auc_score(y_true, y_pred_proba))
+        except:
+            pass
     def score_mean(self):
         for key, value in self.report.items():
             self.report[key] = np.mean(value)

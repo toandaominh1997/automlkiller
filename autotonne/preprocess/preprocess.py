@@ -41,6 +41,7 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
 
         return self
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM SIMPLE IMPUTER')
         X = X.copy()
         if not self.numeric_columns.empty:
             X[self.numeric_columns] = self.numeric_imputer.transform(X[self.numeric_columns])
@@ -57,46 +58,59 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
 
 @PreprocessFactory.register('preprocess-categoryencoder')
 class CategoryEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self, cols = None, method='onehotencoder'):
-        if method == 'backwarddifferenceencoder':
-            self.encoder = ce.BackwardDifferenceEncoder(cols=cols, return_df=True)
-        elif method == 'baseencoder':
-            self.encoder = ce.BaseNEncoder(cols=cols, return_df=True)
-        elif method == 'binaryencoder':
-            self.encoder = ce.BinaryEncoder(cols=cols, return_df=True)
-        elif method == 'catboostencoder':
-            self.encoder = ce.CatBoostEncoder(cols=cols, return_df=True)
-        elif method == 'countencoder':
-            self.encoder = ce.CountEncoder(cols=cols, return_df=True)
-        elif method == 'glmmeencoder':
-            self.encoder = ce.GLMMEncoder(cols=cols, return_df=True)
-        elif method == 'hashingencoder':
-            self.encoder = ce.HashingEncoder(cols=cols, return_df=True)
-        elif method == 'helmerencoder':
-            self.encoder = ce.HelmertEncoder(cols=cols, return_df=True)
-        elif method == 'jamessteinencoder':
-            self.encoder = ce.JamesSteinEncoder(cols=cols, return_df=True)
-        elif method == 'leaveoneoutencoder':
-            self.encoder = ce.LeaveOneOutEncoder(cols=cols, return_df=True)
-        elif method == 'mestimateencoder':
-            self.encoder = ce.MEstimateEncoder(cols=cols, return_df=True)
-        elif method == 'onehotencoder':
-            self.encoder = ce.OneHotEncoder(cols=cols, use_cat_names=True, return_df=True)
-        elif method == 'ordinalencoder':
-            self.encoder = ce.OrdinalEncoder(cols=cols, return_df=True)
-        elif method == 'sumencoder':
-            self.encoder = ce.SumEncoder(cols=cols, return_df=True)
-        elif method == 'polynomialencoder':
-            self.encoder = ce.PolynomialEncoder(cols=cols, return_df=True)
-        elif method == 'targetencoder':
-            self.encoder = ce.TargetEncoder(cols=cols, return_df=True)
-        elif method == 'woeeencoder':
-            self.encoder = ce.WOEEncoder(cols=cols, return_df=True)
+    def __init__(self, cols = [], method='onehotencoder'):
+        self.cols = cols
+        self.method = method
     def fit(self, X, y = None):
+        LOGGER.info('FIT Category-Encoder')
+        if len(self.cols) == 0:
+            self.cols = X.select_dtypes(include=['category', 'object']).columns.tolist()
+        self.encoder = self.choose_method(cols = self.cols, method = self.method)
         self.encoder.fit(X, y)
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM Category-Encoder')
         X = self.encoder.transform(X)
         return X, y
+    def fit_transform(self, X, y = None):
+        X = X.copy()
+        self.fit(X, y)
+        return self.transform(X, y)
+    def choose_method(self, cols, method):
+        if method == 'backwarddifferenceencoder':
+            encoder = ce.BackwardDifferenceEncoder(cols=cols, return_df=True)
+        elif method == 'baseencoder':
+            encoder = ce.BaseNEncoder(cols=cols, return_df=True)
+        elif method == 'binaryencoder':
+            encoder = ce.BinaryEncoder(cols=cols, return_df=True)
+        elif method == 'catboostencoder':
+            encoder = ce.CatBoostEncoder(cols=cols, return_df=True)
+        elif method == 'countencoder':
+            encoder = ce.CountEncoder(cols=cols, return_df=True)
+        elif method == 'glmmeencoder':
+            encoder = ce.GLMMEncoder(cols=cols, return_df=True)
+        elif method == 'hashingencoder':
+            encoder = ce.HashingEncoder(cols=cols, return_df=True)
+        elif method == 'helmerencoder':
+            encoder = ce.HelmertEncoder(cols=cols, return_df=True)
+        elif method == 'jamessteinencoder':
+            encoder = ce.JamesSteinEncoder(cols=cols, return_df=True)
+        elif method == 'leaveoneoutencoder':
+            encoder = ce.LeaveOneOutEncoder(cols=cols, return_df=True)
+        elif method == 'mestimateencoder':
+            encoder = ce.MEstimateEncoder(cols=cols, return_df=True)
+        elif method == 'onehotencoder':
+            encoder = ce.OneHotEncoder(cols=cols, use_cat_names=True, return_df=True)
+        elif method == 'ordinalencoder':
+            encoder = ce.OrdinalEncoder(cols=cols, return_df=True)
+        elif method == 'sumencoder':
+            encoder = ce.SumEncoder(cols=cols, return_df=True)
+        elif method == 'polynomialencoder':
+            encoder = ce.PolynomialEncoder(cols=cols, return_df=True)
+        elif method == 'targetencoder':
+            encoder = ce.TargetEncoder(cols=cols, return_df=True)
+        elif method == 'woeeencoder':
+            encoder = ce.WOEEncoder(cols=cols, return_df=True)
+        return encoder
 
 @PreprocessFactory.register('preprocess-binning')
 class Binning(BaseEstimator, TransformerMixin):
@@ -132,7 +146,7 @@ class Scaling(BaseEstimator, TransformerMixin):
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return self
         if len(self.numeric_columns) == 0:
-            self.numeric_columns = X.select_dtypes(include=[np.number]).columns
+            self.numeric_columns = X.select_dtypes(include=[np.number]).columns.tolist()
         if self.method == 'zscore':
             self.scale = sklearn.preprocessing.StandardScaler()
         elif self.method == 'minmax':
@@ -145,13 +159,14 @@ class Scaling(BaseEstimator, TransformerMixin):
             self.scale = sklearn.preprocessing.RobustScaler()
         elif self.method =='maxabs':
             self.scale = sklearn.preprocessing.MaxAbsScaler()
-        self.scale.fit(X[self.numeric_columns])
+        self.scale.fit(X.loc[:, self.numeric_columns])
         return self
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM SCALING')
         X = X.copy()
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return X
-        X[self.numeric_columns] = self.scale.transform(X)
+        X.loc[:, self.numeric_columns] = self.scale.transform(X.loc[:, self.numeric_columns])
         return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
@@ -168,22 +183,23 @@ class Outlier(BaseEstimator, TransformerMixin):
         X = X.copy()
         self.outlier = []
         if "knn" in self.methods:
-            knn = pyod.models.knn.KNN(contamination = self.contamination).fit(X)
+            knn = pyod.models.knn.KNN(contamination = self.contamination)
             self.outlier.append(knn)
         if 'iforest' in self.methods:
-            iforest = pyod.models.iforest.IForest(contamination= self.contamination).fit(X)
+            iforest = pyod.models.iforest.IForest(contamination= self.contamination)
             self.outlier.append(iforest)
 
         if 'pca' in self.methods:
-            pca = pyod.models.pca.PCA(contamination=self.contamination).fit(X)
+            pca = pyod.models.pca.PCA(contamination=self.contamination)
             self.outlier.append(pca)
 
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM OUTLIER')
         X = X.copy()
         X['vote_outlier'] = 0
         for out in self.outlier:
-            X['vote_outlier'] += out.predict(X.drop(columns=['vote_outlier']))
-        print('Remove outlier: {} rows'.format((X['vote_outlier']==len(self.methods)).sum()))
+            X['vote_outlier'] += out.fit_predict(X.drop(columns=['vote_outlier']))
+        LOGGER.warning('Remove outlier: {} rows'.format((X['vote_outlier']==len(self.methods)).sum()))
         if y is not None:
             y = y.loc[X['vote_outlier']!=len(self.methods)]
         X = X.loc[X['vote_outlier']!=len(self.methods)].drop(columns=['vote_outlier'])
@@ -198,7 +214,7 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
                  categorical_columns=[]):
         self.categorical_columns = categorical_columns
     def fit(self, X, y = None):
-        LOGGER.info('FIT REDUCE')
+        LOGGER.info('FIT REDUCE CATEGORICAL WITH COUNT')
         X = X.copy()
         self.data_count = {}
         for col in self.categorical_columns:
@@ -206,6 +222,7 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
                 self.data_count[col] = {}
             self.data_count[col] = X[col].value_counts().to_dict()
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM REDUCE CATEGORICAL WITH COUNT')
         for col in self.categorical_columns:
             X[col].replace(self.data_count[col].keys(), self.data_count[col].values(), inplace=True)
         return X, y
@@ -250,7 +267,7 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
         self.n_components = n_components
         self.random_state = random_state
     def fit(self, X, y = None):
-        LOGGER.info('FIT REDUCE')
+        LOGGER.info('FIT REDUCE DIMENSION')
         X = X.copy()
         if self.method == 'pca_linear':
             self.model = sklearn.decomposition.PCA(self.n_components, random_state=self.random_state).fit(X)
@@ -262,6 +279,7 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
             self.model = sklearn.decomposition.IncrementalPCA(self.n_components, random_state = random_state)
         return self
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM REDUCE DIMENSION')
         X = X.copy()
         X = self.model.transform(X)
         return X, y

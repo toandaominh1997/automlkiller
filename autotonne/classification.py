@@ -26,14 +26,12 @@ class Classification(object):
                  preprocess: bool = True,
                  ):
         super(Classification, self).__init__()
-        self.data = data
-        self.target = target
-        X = self.data.drop(columns=[self.target])
-        y = self.data[self.target]
+        X = data.drop(columns=[target])
+        y = data[target]
         X, y = Preprocess().fit_transform(X, y)
-        X = pd.DataFrame(X)
-        y = pd.DataFrame(y)
-        self.X = X
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        self.X = X 
         self.y = y
 
     def compare_models(self,
@@ -41,12 +39,9 @@ class Classification(object):
                        n_splits: int = 2,
                        sort: str = 'Accuracy',
                        verbose: bool = True):
+        X = self.X 
+        y = self.y
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
-        X = self.data.drop(columns=[self.target])
-        y = self.data[self.target]
-        X, y = Preprocess().fit_transform(X, y)
-        X = pd.DataFrame(X)
-        y = pd.DataFrame(y)
         models = []
         scores = {}
         for name_model in ModelFactory.name_registry:

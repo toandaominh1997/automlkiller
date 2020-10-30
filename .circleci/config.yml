@@ -19,9 +19,9 @@ jobs:
                   command: |
                       pip install -r requirements.txt
             - run:
-                  name: "python test"
+                  name: "python main"
                   command: |
-                      python test.py
+                      python main.py
             - store_test_results:
                 path: ~/root/autotonne/
             - store_artifacts:
