@@ -22,9 +22,9 @@ jobs:
                   name: "python test"
                   command: |
                       python test.py
-            - store-test-results:
+            - store_test_results:
                 path: /root/autotonne
-            - store-artifacts:
+            - store_artifacts:
                 path: /root/autotonne
     test:
         working_directory: /root
@@ -40,9 +40,9 @@ jobs:
                   name: "run test"
                   command: |
                       python test.py
-            - store-test-results:
+            - store_test_results:
                 path: /root/autotonne
-            - store-artifacts:
+            - store_artifacts:
                 path: /root/autotonne
 
 workflows:
