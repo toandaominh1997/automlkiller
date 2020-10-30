@@ -6,21 +6,35 @@ jobs:
             - image: circleci/python:3.8.5
         steps:
             - checkout
-            - run: python --version
-            - run: pip --version
-            - run: |
-                  pip install -r requirements.txt
+            - run:
+                  name: "python version"
+                  command: |
+                      python --version
+            - run:
+                  name: "pip version"
+                  command: |
+                      pip --version
+            - run:
+                  name: "install package"
+                  command: |
+                      pip install -r requirements.txt
     test:
-      working_directory: ~/root
-      docker:
-        - image: circleci/python:3.8.5
-      steps:
-        - checkout
-        - run: |
-              python test.py
+        working_directory: ~/root
+        docker:
+            - image: circleci/python:3.8.5
+        steps:
+            - checkout
+            - run:
+                  name: "install package"
+                  command: |
+                      pip install -r requirements.txt
+            - run:
+                  name: "run test"
+                  command: |
+                      python test.py
 
 workflows:
-  workflow:
-    jobs:
-      - build
-      - test
+    workflow:
+        jobs:
+            - build
+            - test
