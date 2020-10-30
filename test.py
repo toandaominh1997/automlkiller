@@ -8,7 +8,7 @@ print('RUN CIRCLE CI')
 
 
 if __name__ =='__main__':
-    X, y = make_classification(n_samples=1000000, n_features=50) 
+    X, y = make_classification(n_samples=10000, n_features=50) 
     data = pd.DataFrame(X) 
     data['target'] = y
     Classification(data = data, target='target').compare_models()
