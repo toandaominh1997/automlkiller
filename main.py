@@ -17,7 +17,8 @@ def main():
     df = pd.read_csv('./data/data.csv')
     df = df.loc[:, columns]
     print(df.head())
-    Classification(data = df, target='Age').compare_models()
-    Classification(data = df, target='Age').tune_models()
+    obj = Classification(data = df, target='Age')
+    obj.compare_models()
+    obj.tune_models()
 if __name__ =='__main__':
     main()

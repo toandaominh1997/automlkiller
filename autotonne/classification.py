@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import numpy as np
 import pandas as pd
+import json
 
 from sklearn.datasets import make_classification
 from sklearn.model_selection import StratifiedKFold
@@ -31,7 +32,7 @@ class Classification(object):
         X, y = Preprocess().fit_transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
         y = pd.DataFrame(y).reset_index(drop=True)
-        self.X = X 
+        self.X = X
         self.y = y
 
     def compare_models(self,
@@ -39,7 +40,7 @@ class Classification(object):
                        n_splits: int = 2,
                        sort: str = 'Accuracy',
                        verbose: bool = True):
-        X = self.X 
+        X = self.X
         y = self.y
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
         models = []
@@ -61,7 +62,9 @@ class Classification(object):
                     except:
                         LOGGER.warn('{} has no attribute predict proba'.format(name_model))
                 scores[name_model] = score_model.score_mean()
+        scores = pd.read_json(json.dumps(scores))
         print('scores: ', scores)
+        return scores
 
 
 
@@ -81,96 +84,97 @@ class Classification(object):
         LOGGER.info('tune models')
         best_params_model = {}
         model_grid = None
+        print(ModelFactory.name_registry)
         for name_model in ModelFactory.name_registry:
-            if 'classification-ridgeclassifier' in name_model:
-                model = ModelFactory.create_executor(name_model)
-                estimator = model.estimator
+            LOGGER.info('tunning model_name: {}'.format(name_model))
+            model = ModelFactory.create_executor(name_model)
+            estimator = model.estimator
 
+            parameter_grid = model.tune_grid
+            parameter_distributions = model.tune_distributions
+            if (search_library == 'scikit-learn' or search_library == 'tune-sklearn') and (search_algorithm == 'grid' or search_algorithm == 'random'):
                 parameter_grid = model.tune_grid
-                parameter_distributions = model.tune_distributions
-                if (search_library == 'scikit-learn' or search_library == 'tune-sklearn') and (search_algorithm == 'grid' or search_algorithm == 'random'):
-                    parameter_grid = model.tune_grid
-                else:
-                    parameter_grid = model.tune_distributions
-                model_grid = None
-                if search_library == 'optuna':
-                    pruner_translator = {
-                        "asha": optuna.pruners.SuccessiveHalvingPruner(),
-                        "hyperband": optuna.pruners.HyperbandPruner(),
-                        "median": optuna.pruners.MedianPruner(),
-                        False: optuna.pruners.NopPruner(),
-                        None: optuna.pruners.NopPruner(),
-                    }
-                    pruner = early_stopping
-                    if pruner in pruner_translator:
-                        pruner = pruner_translator[early_stopping]
+            else:
+                parameter_grid = model.tune_distributions
+            model_grid = None
+            if search_library == 'optuna':
+                pruner_translator = {
+                    "asha": optuna.pruners.SuccessiveHalvingPruner(),
+                    "hyperband": optuna.pruners.HyperbandPruner(),
+                    "median": optuna.pruners.MedianPruner(),
+                    False: optuna.pruners.NopPruner(),
+                    None: optuna.pruners.NopPruner(),
+                }
+                pruner = early_stopping
+                if pruner in pruner_translator:
+                    pruner = pruner_translator[early_stopping]
 
-                    sampler_translator = {
-                        "tpe": optuna.samplers.TPESampler(seed=24),
-                        "random": optuna.samplers.RandomSampler(seed=24),
-                    }
-                    sampler = sampler_translator[search_algorithm]
+                sampler_translator = {
+                    "tpe": optuna.samplers.TPESampler(seed=24),
+                    "random": optuna.samplers.RandomSampler(seed=24),
+                }
+                sampler = sampler_translator[search_algorithm]
 
-                    try:
-                        param_grid = get_optuna_distributions(parameter_distributions)
-                    except:
-                        logger.warning(
-                            "Couldn't convert param_grid to specific library distributions. Exception:"
-                        )
-                        logger.warning(traceback.format_exc())
-                    study = optuna.create_study(
-                        direction = 'maximize', sampler = sampler, pruner = pruner
+                try:
+                    param_grid = get_optuna_distributions(parameter_distributions)
+                except:
+                    logger.warning(
+                        "Couldn't convert param_grid to specific library distributions. Exception:"
                     )
-                    LOGGER.info('Initializing optuna.intergration.OptnaSearchCV')
-                    model_grid = optuna.integration.OptunaSearchCV(
+                    logger.warning(traceback.format_exc())
+                study = optuna.create_study(
+                    direction = 'maximize', sampler = sampler, pruner = pruner
+                )
+                LOGGER.info('Initializing optuna.intergration.OptnaSearchCV')
+                model_grid = optuna.integration.OptunaSearchCV(
+                    estimator = estimator,
+                    param_distributions = param_grid,
+                    max_iter = early_stopping_max_iters,
+                    n_jobs = n_jobs,
+                    n_trials = n_iter,
+                    random_state = 24,
+                    scoring = optimize,
+                    study = study,
+                    refit = False,
+                    verbose = verbose,
+                    error_score = 'raise'
+                )
+            elif search_library == 'tune-sklearn':
+                early_stopping_translator = {
+                                            "asha": "ASHAScheduler",
+                                            "hyperband": "HyperBandScheduler",
+                                            "median": "MedianStoppingRule",
+                                        }
+                if early_stopping in early_stopping_translator:
+                    early_stopping = early_stopping_translator[early_stopping]
+                do_early_stop = early_stopping and can_early_stop(estimator, True, True, True, parameter_grid)
+
+                if search_algorithm == 'grid':
+
+                    LOGGER.info('Initializing tune_sklearn.TuneGridSearchCV')
+                    model_grid = TuneGridSearchCV(
                         estimator = estimator,
-                        param_distributions = param_grid,
-                        max_iter = early_stopping_max_iters,
-                        n_jobs = n_jobs,
-                        n_trials = n_iter,
-                        random_state = 24,
+                        param_grid = parameter_grid,
+                        early_stopping = do_early_stop,
                         scoring = optimize,
-                        study = study,
-                        refit = False,
-                        verbose = verbose,
-                        error_score = 'raise'
+                        cv = fold,
+                        max_iters=early_stopping_max_iters,
+                        refit = True,
+                        n_jobs = n_jobs
                     )
-                elif search_library == 'tune-sklearn':
-                    early_stopping_translator = {
-                                                "asha": "ASHAScheduler",
-                                                "hyperband": "HyperBandScheduler",
-                                                "median": "MedianStoppingRule",
-                                            }
-                    if early_stopping in early_stopping_translator:
-                        early_stopping = early_stopping_translator[early_stopping]
-                    do_early_stop = early_stopping and can_early_stop(estimator, True, True, True, parameter_grid)
-
-                    if search_algorithm == 'grid':
-
-                        LOGGER.info('Initializing tune_sklearn.TuneGridSearchCV')
-                        model_grid = TuneGridSearchCV(
-                            estimator = estimator,
-                            param_grid = parameter_grid,
-                            early_stopping = do_early_stop,
-                            scoring = optimize,
-                            cv = fold,
-                            max_iters=early_stopping_max_iters,
-                            refit = True,
-                            n_jobs = n_jobs
-                        )
 
 
 
-                model_grid.fit(self.X, self.y)
-                best_params = model_grid.best_params_
-                LOGGER.info('best_params: {}'.format(best_params))
-                best_params_model[name_model] = best_params
-            return best_params_model
+            model_grid.fit(self.X, self.y)
+            best_params = model_grid.best_params_
+            LOGGER.info('best_params: {}'.format(best_params))
+            best_params_model[name_model] = best_params
+        return best_params_model
 
 
-if __name__=='__main__': 
-    X, y = make_classification(n_samples=100000, n_features=50) 
-    data = pd.DataFrame(X) 
+if __name__=='__main__':
+    X, y = make_classification(n_samples=100000, n_features=50)
+    data = pd.DataFrame(X)
     data['target'] = y
-    Classification(data = data, target='target').compare_models()
-    Classification(data = data, target='target').tune_models()
+    obj = Classification(data = data, target='target').compare_models()
+    obj.tune_models()
