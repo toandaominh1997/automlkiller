@@ -172,6 +172,21 @@ class Scaling(BaseEstimator, TransformerMixin):
         self.fit(X, y)
         return self.transform(X, y)
 
+class MakeTimeFeature(BaseEstimator, TransformerMixin):
+    def __init__(self,
+                 time_features = [],
+                 list_of_features = ['month', 'weekday', 'is_month_end', 'is_month_start', 'hour']
+                 ):
+        self.time_features =time_features
+        self.list_of_features = list_of_features
+    def fit(self, X, y = None):
+        X = X.copy()
+        if not self.time_features:
+            self.time_features = X.select_dtypes(include = ['datatime64[ns]']).columns.tolist()
+        return self
+    def transform(self, X, y = None):
+        pass
+
 @PreprocessFactory.register('preprocess-outlier')
 class Outlier(BaseEstimator, TransformerMixin):
     def __init__(self, methods = ['knn', 'iforest', 'pca'], contamination = 0.2, random_state = 42,  verbose = True):
