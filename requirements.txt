@@ -10,3 +10,7 @@ lightgbm
 pandas-profiling
 imbalanced-learn
 scikit-plot
+optuna
+ray
+tune-sklearn
+

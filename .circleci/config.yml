@@ -5,17 +5,17 @@ jobs:
     docker:
       - image: circleci/python:3.9.0
     steps:
-        - checkout
-        - run: python --version
-        - run:
-          name: install all package
-          command: |
-              pip install -r requirements.txt
-        - run:
-          name: test logic
-          command: |
-              python3 test.py
-        - run:
-          name: test flow
-          command: |
-              python3 test.py
+      - checkout
+      - run: python --version
+      - run:
+        name: install all package
+        command: |
+          pip install -r requirements.txt
+      - run:
+        name: test logic
+        command: |
+          python3 test.py
+      - run:
+        name: test flow
+        command: |
+          python3 test.py
