@@ -1,4 +1,4 @@
-version: 2.2
+version: 2.1
 jobs:
     build:
         working_directory: ~/root
@@ -20,8 +20,7 @@ jobs:
               python test.py
 
 workflows:
-  version: 2.2
-  build_and_test:
+  workflow:
     jobs:
       - build
       - test
