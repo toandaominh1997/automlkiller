@@ -1,14 +1,29 @@
-version: 2.1
+version: 2.2
 jobs:
-  build:
-    working_directory: ~/root
-    docker:
-      - image: circleci/python:3.8.5
-    steps:
-      - checkout
-      - run: python --version
-      - run: pip --version
-      - run: |
-          pip install -r requirements.txt
-      - run: |
-          python test.py
+    build:
+        working_directory: ~/root
+        docker:
+            - image: circleci/python:3.8.5
+        steps:
+            - checkout
+            - run: python --version
+            - run: pip --version
+            - run: |
+                  pip install -r requirements.txt
+            - run: |
+                  python test.py
+	test:
+		working_directory: ~/root
+		docker:
+			- image: circleci/python:3.8.5
+		steps:
+			- checkout
+			- run: |
+				  python test.py
+
+workflows:
+  version: 2.2
+  build_and_test:
+    jobs:
+      - build
+      - test
