@@ -1,25 +1,15 @@
+import numpy as np
+import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+from sklearn.datasets import make_classification
+from autotonne.classification import Classification
 print('RUN CIRCLE CI')
 
-voucher_cost
-voucher_cost_AGE 
-voucher_cost_M_T180_VMVMP_TOTAL_SPEND
-voucher_cost_notiopened2week
-voucher_cost_notiopened1month
-voucher_cost_voucher2week
-voucher_cost_voucher1month
-voucher_cost_order2week
-voucher_cost_order1month
-promotion_detail_absolute_discount_power_2
-promotion_detail_percentage_discount_power_2
-promotion_detail_discount_cap_max_power_2
-promotion_detail_order_value_cap_min_power_2
-promotion_detail_absolute_discount
-promotion_detail_order_value_cap_min
-promotion_detail_percentage_discount
-promotion_detail_discount_cap_max
-content_detail_promote_type_percentage_discount
-content_detail_promote_type_absolute_discount
-content_detail_promote_type_freeship_discount
-content_detail_promote_type_no_promotion
-GENDER
-AGE
+
+if __name__ =='__main__':
+    X, y = make_classification(n_samples=1000000, n_features=50) 
+    data = pd.DataFrame(X) 
+    data['target'] = y
+    Classification(data = data, target='target').compare_models()
+    Classification(data = data, target='target').tune_models()

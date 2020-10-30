@@ -5,3 +5,8 @@ pyod
 category-encoders
 torch
 tensorflow
+catboost
+lightgbm
+pandas-profiling
+imbalanced-learn
+scikit-plot

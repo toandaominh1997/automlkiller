@@ -10,8 +10,8 @@ import pyod.models.iforest
 import pyod.models.pca
 import category_encoders as ce
 
-from preprocess.preprocee_factory import PreprocessFactory
-from utils.logger import LOGGER
+from autotonne.preprocess.preprocee_factory import PreprocessFactory
+from autotonne.utils.logger import LOGGER
 
 @PreprocessFactory.register('preprocess-simpleimputer')
 class SimpleImputer(BaseEstimator, TransformerMixin):

@@ -3,12 +3,9 @@ import numpy as np
 import pandas as pd
 import sklearn
 from imblearn.pipeline import Pipeline
-from utils import LOGGER
-import warnings
-from preprocess.preprocess import *
-from preprocess.preprocee_factory import PreprocessFactory
-
-warnings.filterwarnings('ignore')
+from autotonne.preprocess.preprocess import *
+from autotonne.preprocess.preprocee_factory import PreprocessFactory
+from autotonne.utils import LOGGER
 
 class Preprocess(object):
     def __init__(self,

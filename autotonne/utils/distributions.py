@@ -7,9 +7,8 @@ except:
 
 import numpy as np
 
-def np_list_arange(
-    start: float, stop: float, step: float, inclusive: bool = False
-) -> List[float]:
+
+def np_list_arange(start, stop, step, inclusive = False):
     """
     Numpy arange returned as list with floating point conversion
     failsafes.
@@ -36,6 +35,8 @@ def np_list_arange(
     range[0] = start
     range[-1] = stop - step
     return range
+
+
 
 class Distribution:
     def __init__(self):

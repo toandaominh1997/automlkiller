@@ -16,6 +16,6 @@ jobs:
           command: |
               python3 test.py
         - run:
-          name: test preprocessing
+          name: test flow
           command: |
-              python3 autotonne/preproces/preprocess.py
+              python3 test.py
