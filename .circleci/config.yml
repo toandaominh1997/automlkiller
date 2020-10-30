@@ -10,16 +10,14 @@ jobs:
             - run: pip --version
             - run: |
                   pip install -r requirements.txt
-            - run: |
-                  python test.py
-	test:
-		working_directory: ~/root
-		docker:
-			- image: circleci/python:3.8.5
-		steps:
-			- checkout
-			- run: |
-				  python test.py
+    test:
+      working_directory: ~/root
+      docker:
+        - image: circleci/python:3.8.5
+      steps:
+        - checkout
+        - run: |
+              python test.py
 
 workflows:
   version: 2.2
