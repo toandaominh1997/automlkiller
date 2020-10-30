@@ -7,15 +7,8 @@ jobs:
     steps:
       - checkout
       - run: python --version
-      - run:
-        name: install all package
-        command: |
+      - run: pip --version
+      - run: |
           pip install -r requirements.txt
-      - run:
-        name: test logic
-        command: |
-          python3 test.py
-      - run:
-        name: test flow
-        command: |
-          python3 test.py
+      - run: |
+          python test.py
