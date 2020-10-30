@@ -1,7 +1,7 @@
 version: 2.1
 jobs:
     build:
-        working_directory: ~/root
+        working_directory: /root
         docker:
             - image: circleci/python:3.8.5
         steps:
@@ -18,10 +18,18 @@ jobs:
                   name: "install package"
                   command: |
                       pip install -r requirements.txt
+            - run:
+                  name: "python test"
+                  command: |
+                      python test.py
+            - store-test-results:
+                path: /root/autotonne
+            - store-artifacts:
+                path: /root/autotonne
     test:
-        working_directory: ~/root
+        working_directory: /root
         docker:
-            - image: circleci/python:3.8.5
+            - image: circleci/python:3.9.0
         steps:
             - checkout
             - run:
@@ -32,6 +40,10 @@ jobs:
                   name: "run test"
                   command: |
                       python test.py
+            - store-test-results:
+                path: /root/autotonne
+            - store-artifacts:
+                path: /root/autotonne
 
 workflows:
     workflow:
