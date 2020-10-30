@@ -23,7 +23,7 @@ jobs:
                   command: |
                       python test.py
             - store_test_results:
-                path: ~/root/autotonne
+                path: ~/root/autotonne/
             - store_artifacts:
                 path: ~/root/autotonne
     test:
@@ -41,7 +41,7 @@ jobs:
                   command: |
                       python test.py
             - store_test_results:
-                path: ~/root/autotonne
+                path: ~/root/autotonne/
             - store_artifacts:
                 path: ~/root/autotonne
 
