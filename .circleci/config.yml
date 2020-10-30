@@ -1,7 +1,7 @@
 version: 2.1
 jobs:
     build:
-        working_directory: /root
+        working_directory: ~/root
         docker:
             - image: circleci/python:3.8.5
         steps:
@@ -23,11 +23,11 @@ jobs:
                   command: |
                       python test.py
             - store_test_results:
-                path: /root/autotonne
+                path: ~/root/autotonne
             - store_artifacts:
-                path: /root/autotonne
+                path: ~/root/autotonne
     test:
-        working_directory: /root
+        working_directory: ~/root
         docker:
             - image: circleci/python:3.9.0
         steps:
@@ -41,9 +41,9 @@ jobs:
                   command: |
                       python test.py
             - store_test_results:
-                path: /root/autotonne
+                path: ~/root/autotonne
             - store_artifacts:
-                path: /root/autotonne
+                path: ~/root/autotonne
 
 workflows:
     workflow:
