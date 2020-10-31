@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from scipy import stats
 import sklearn
 import sklearn.impute
 import sklearn.feature_selection
@@ -12,6 +13,112 @@ import category_encoders as ce
 
 from autotonne.preprocess.preprocee_factory import PreprocessFactory
 from autotonne.utils.logger import LOGGER
+
+@PreprocessFactory.register('preprocess-datatype')
+class DataTypes(BaseEstimator, TransformerMixin):
+    def __init__(self,
+                 categorical_columns = [],
+                 numeric_columns = [],
+                 time_columns = [],
+                 verbose = True):
+        self.categorical_columns = categorical_columns
+        self.numeric_columns = numeric_columns
+        self.time_columns = time_columns
+        self.verbose = verbose
+    @staticmethod
+    def str_if_not_null(x):
+        if pd.isnull(x) or (x is None) or pd.isna(x) or (x is not x):
+            return x
+        return str(x)
+    def fit(self, X, y = None):
+        LOGGER.info('FIT DATATYPE')
+        X = X.copy()
+        y = y.copy()
+        X.replace([np.inf, -np.inf], np.NaN, inplace=True)
+        X.columns = [str(col) for col in X.columns]
+        for col in X.select_dtypes(include=['object']).columns:
+            try:
+                X[col] = X[col].astype("int64")
+            except:
+                None
+        for col in X.select_dtypes(include=['object']).columns:
+            try:
+                X[col] = pd.to_datatime(X[col], infer_datetime_format = True, utc = False, errors = 'raise')
+            except:
+                continue
+        # if data type is bool or pandas Categorical, convert to categorical
+        for col in X.select_dtypes(include=["bool", "category"]).columns:
+            X[col] = X[col].astype("object")
+
+        # with csv, if we have any null in a column that was int, pandas will read it as float
+        # so first we need to convert any such floats that hae NaN and unique values are lower than 20
+        for col in X.select_dtypes(include = ["float64"]).columns:
+            X[col] = X[col].astype("float32")
+
+            nan_count = sum(X[col].isnull())
+            count_float = np.nansum([False if r.is_integer() else True for r in X[col]])
+            count_float = (count_float - nan_count)
+            if (count_float == 0) and (X[col].nunique() <= 20) and (nan_count > 0):
+                X[col] = X[col].astype("object")
+
+            # if column is int and unique counts are more than two
+            for col in X.select_dtypes(include = ["int64"]).columns:
+                if X[col].nunique() <= 20:
+                    X[col] = X[col].apply(self.str_if_not_null)
+                else:
+                    X[col] = X[col].astype("float32")
+            for col in X.select_dtypes(include=['float32']).columns:
+                if X[col].nunique() == 2:
+                    X[col] = X[col].apply(self.str_if_not_null)
+
+            for col in self.numeric_columns:
+                try:
+                    X[col] = X[col].astype("float32")
+                except:
+                    X[col] = X[col].astype(self.str_if_not_null)
+
+            for col in self.categorical_columns:
+                try:
+                    X[col] = X[col].apply(self.str_if_not_null)
+                except:
+                    continue
+
+            for col in self.time_columns:
+                try:
+                    X[col] = pd.to_datetime(X[col], infer_datetime_format=True, utc = False, errors = "raise")
+                except:
+                    continue
+            for col in X.select_dtypes(include=["datetime64"]).columns:
+                X[col] = X[col].astype("datetime64[ns]")
+            self.learned_dtypes = X.dtypes
+
+            X = X.replace([np.inf, -np.inf], np.NaN).astype(self.learned_dtypes)
+            return self
+
+    def transform(self, X, y = None):
+        LOGGER.info('transform datatype')
+        X = X.copy()
+        y = y.copy()
+        X.replace([np.inf, -np.inf], np.nan, inplace=True)
+        X.columns = [str(col) for col in X.columns]
+        X = X.astype(self.learned_dtypes)
+
+        # remove columns with duplicate name
+        X = X.loc[:, ~X.columns.duplicated()]
+
+        # remove nas
+        X.dropna(axis = 0, how='all', inplace = True)
+        X.dropna(axis = 1, how = 'all', inplace = True)
+
+        print('X: ', X.head())
+        print('info:', X.info())
+        return X, y
+    def fit_transform(self, X, y = None):
+        self.fit(X, y)
+        return self.transform(X, y)
+
+
+
 
 @PreprocessFactory.register('preprocess-simpleimputer')
 class SimpleImputer(BaseEstimator, TransformerMixin):
@@ -55,6 +162,44 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
         X = X.copy()
         self.fit(X, y)
         return self.transform(X, y)
+
+
+# Zero and Near Zero Variance
+@PreprocessFactory.register('preprocess-zeronearzerovariance')
+class ZeroNearZeroVariance(BaseEstimator, TransformerMixin):
+    def __init__(self, threshold_first = 0.1, threshold_second = 20):
+        self.threshold_first = threshold_first
+        self.threshold_second = threshold_second
+        self.to_drop = []
+    def fit(self, X, y = None):
+        LOGGER.info('FIT ZERO AND NEARZERO Variance')
+        X = X.copy()
+        y = y.copy()
+
+        for col in X.columns:
+            u = pd.DataFrame(X[col].value_counts()).sort_values(by=col, ascending = False, inplace = False)
+            first = len(u) / len(X)
+            if len(u[col]) == 1:
+                second = 100
+            else:
+                second = u.iloc[0, 0] / u.iloc[1, 0]
+
+            if first <= self.threshold_first and second >= self.threshold_second:
+                self.to_drop.append(col)
+            if second == 100:
+                self.to_drop.append(col)
+    def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM ZERO and NEARZERO Variance')
+        X = X.copy()
+        y = y.copy()
+        X = X.drop(columns = self.to_drop)
+        return X, y
+    def fit_transform(self, X, y = None):
+        X = X.copy()
+        y = y.copy()
+        self.fit(X, y)
+        return self.transform(X, y)
+
 
 @PreprocessFactory.register('preprocess-categoryencoder')
 class CategoryEncoder(BaseEstimator, TransformerMixin):
@@ -111,6 +256,40 @@ class CategoryEncoder(BaseEstimator, TransformerMixin):
         elif method == 'woeeencoder':
             encoder = ce.WOEEncoder(cols=cols, return_df=True)
         return encoder
+
+@PreprocessFactory.register('preprocess-groupsimilarfeature')
+class GroupSimilarFeature(BaseEstimator, TransformerMixin):
+    def __init__(
+            self,
+            group_name =[],
+            list_of_group_feature = []):
+        self.list_of_group_feature = list_of_group_feature
+        self.group_name = group_name
+    def fit(self, X, y = None):
+        LOGGER.info('FIT GroupSimilarFeature')
+        X = X.copy()
+        y = y.copy()
+        return self
+    def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM GroupSimilarFeature')
+        X = X.copy()
+        y = y.copy()
+        if len(self.list_of_group_feature) > 0:
+            for f, g in zip(self.list_of_group_feature, self.group_name):
+                X[g+"_min"] = X[f].apply(np.min, 1)
+                X[g+"_max"] = X[f].apply(np.max, 1)
+                X[g+"_mean"] = X[f].apply(np.mean, 1)
+                X[g+"_median"] = X[f].apply(np.median, 1)
+                X[g+"_mode"] = stats.mode(X[f], 1)[0]
+                X[g+"_std"] = X[f].apply(np.std, 1)
+        return X, y
+    def fit_transform(self, X, y = None):
+        X = X.copy()
+        y = y.copy()
+        self.fit(X, y)
+        return self.transform(X, y)
+
+
 
 @PreprocessFactory.register('preprocess-binning')
 class Binning(BaseEstimator, TransformerMixin):
@@ -172,20 +351,39 @@ class Scaling(BaseEstimator, TransformerMixin):
         self.fit(X, y)
         return self.transform(X, y)
 
+@PreprocessFactory.register('preprocess-maketimefeature')
 class MakeTimeFeature(BaseEstimator, TransformerMixin):
     def __init__(self,
-                 time_features = [],
-                 list_of_features = ['month', 'weekday', 'is_month_end', 'is_month_start', 'hour']
+                 time_columns = [],
+                 list_of_feature = ['month',  'dayofweek', 'weekday', 'is_month_end', 'is_month_start', 'hour']
                  ):
-        self.time_features =time_features
-        self.list_of_features = list_of_features
+        self.time_columns =time_columns
+        self.list_of_feature = set(list_of_feature)
     def fit(self, X, y = None):
+        LOGGER.info('FIT MakeTimeFeature')
         X = X.copy()
-        if not self.time_features:
-            self.time_features = X.select_dtypes(include = ['datatime64[ns]']).columns.tolist()
+        if not self.time_columns:
+            self.time_columns = X.select_dtypes(include = ['datetime64[ns]']).columns.tolist()
         return self
     def transform(self, X, y = None):
-        pass
+        LOGGER.info('TRANSFORM MakeTimeFeature')
+        for col in self.time_columns:
+            if 'hour' in self.list_of_feature:
+                X[col+"_hour"] = X[col].dt.hour
+            if 'dayofweek' in self.list_of_feature:
+                X[col+"_dayofweek"] = X[col].dt.dayofweek
+            if 'weekday' in self.list_of_feature:
+                X[col + "_weekday"] = X[col].dt.weekday
+            if 'is_month_start' in self.list_of_feature:
+                X[col + "_is_month_start"] = X[col].dt.is_month_start
+            if 'is_month_end' in self.list_of_feature:
+                X[col + "_is_month_end"] = X[col].dt.is_month_end
+        X.drop(columns = self.time_columns, errors='ignore', inplace = True)
+        return X, y
+    def fit_transform(self, X, y):
+        self.fit(X, y)
+        return self.transform(X, y)
+
 
 @PreprocessFactory.register('preprocess-outlier')
 class Outlier(BaseEstimator, TransformerMixin):
@@ -222,6 +420,62 @@ class Outlier(BaseEstimator, TransformerMixin):
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
+
+
+@PreprocessFactory.register('preprocess-makenonlinearfeature')
+class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
+    def __init__(self,
+                polynomial_columns = [],
+                degree = 2,
+                interaction_only = False,
+                include_bias = False,
+                other_nonlinear_feature = ["sin", "cos", "tan"]
+                 ):
+        self.polynomial_columns = polynomial_columns
+        self.degree = degree
+        self.interaction_only = interaction_only
+        self.include_bias = include_bias
+        self.other_nonlinear_feature = other_nonlinear_feature
+        self.poly = sklearn.preprocessing.PolynomialFeatures(degree=degree,
+                                                             interaction_only=interaction_only,
+                                                             include_bias=include_bias)
+    def fit(self, X, y):
+        X = X.copy()
+        LOGGER.info('FIT MakeNonLinearFeature')
+        if len(self.polynomial_columns) == 0:
+            self.polynomial_columns = X.select_dtypes(include=[np.number]).columns
+        if self.polynomial_columns is None:
+            self.polynomial_columns = []
+        return self
+    def transform(self, X, y):
+        LOGGER.info('TRANSFORM MakeNonLinearFeature')
+        X = X.copy()
+        y = y.copy()
+
+        if len(self.polynomial_columns) > 0:
+            self.poly.fit(X[self.polynomial_columns])
+            poly_feature = self.poly.get_feature_names(input_features=self.polynomial_columns)
+            data = self.poly.transform(X[self.polynomial_columns])
+
+            for idx, col in enumerate(poly_feature):
+                X[col] = data[:, idx]
+
+            if 'sin' in self.other_nonlinear_feature:
+                for col in self.polynomial_columns:
+                    X[col + "_sin"] = np.sin(X[col])
+            if 'cos' in self.other_nonlinear_feature:
+                for col in self.polynomial_columns:
+                    X[col + "_cos"] = np.cos(X[col])
+            if 'tan' in self.other_nonlinear_feature:
+                for col in self.polynomial_columns:
+                    X[col + "_tan"] = np.tan(X[col])
+
+
+
+        return X, y
+
+
+
 
 @PreprocessFactory.register('preprocess-reducecategorywithcount')
 class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):

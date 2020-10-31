@@ -9,16 +9,32 @@ from autotonne.utils import LOGGER
 
 class Preprocess(object):
     def __init__(self,
+                datatype = True,
+                datatype_categorical_columns = [],
+                datatype_numeric_columns = [],
+                datatype_time_columns = [],
                 imputer = True,
                 imputer_numeric_strategy = "mean",
                 imputer_categorical_strategy = "most_frequent",
 
+                zeronearzerovariance = True,
+                zeronearzerovariance_threshold_first = 0.1,
+                zeronearzerovariance_threshold_second = 20,
+
                 categoryencoder = True,
                 categoryencoder_cols = [],
-                categoryencoder_method = 'onehotencoder',
+                categoryencoder_method = 'targetencoder',
+
+                groupsimilarfeature = True,
+                groupsimilarfeature_group_name = ['OMG', 'ONEID'],
+                groupsimilarfeature_list_of_group_feature = [['GKDiving', 'GKHandling'], ['GKKicking', 'GKReflexes']],
 
                 binning = False,
                 binning_features_to_discretize= [],
+
+                maketimefeature =True,
+                makefeature_time_columns = [],
+                maketimefeature_list_of_feature = ['month',  'dayofweek', 'weekday', 'is_month_end', 'is_month_start', 'hour'],
 
                 scaling = True,
                 scaling_method = 'zscore',
@@ -27,6 +43,13 @@ class Preprocess(object):
                 outlier = True,
                 outlier_method = ['pca', 'iforest', 'knn'],
                 outlier_contamination = 0.2,
+
+                makenonlinearfeature = True,
+                makenonlinearfeature_polynomial_columns = [],
+                makenonlinearfeature_degree = 2,
+                makenonlinearfeature_intergration_only = False,
+                makenonlinearfeature_include_bias = False,
+                makenonlinearfeature_other_nonlinear_feature = ["sin", "cos", "tan"],
 
                 rfe = False,
                 rfe_estimator = None,
@@ -42,16 +65,36 @@ class Preprocess(object):
                  ):
         super(Preprocess, self).__init__()
         self.params = {
+            'datatype': {
+                'flag': datatype,
+                'numeric_columns': datatype_numeric_columns,
+                'categorical_columns': datatype_categorical_columns,
+                'time_columns': datatype_time_columns
+            },
             'simpleimputer': {
                 'flag': imputer,
                 'numeric_strategy': imputer_numeric_strategy,
                 'categorical_strategy': imputer_categorical_strategy
             },
+
+            'zeronearzerovariance': {
+                'flag': zeronearzerovariance,
+                'threshold_first': zeronearzerovariance_threshold_first,
+                'threshold_second': zeronearzerovariance_threshold_second
+            },
+
             'categoryencoder': {
                 'flag': categoryencoder,
                 'cols': categoryencoder_cols,
                 'method': categoryencoder_method
             },
+
+            'groupsimilarfeature': {
+                'flag': groupsimilarfeature,
+                'group_name': groupsimilarfeature_group_name,
+                'list_of_group_feature': groupsimilarfeature_list_of_group_feature
+            },
+
             'binning': {
                 'flag': binning,
                 'features_to_discretize': binning_features_to_discretize
@@ -61,10 +104,25 @@ class Preprocess(object):
                 'method': scaling_method,
                 'numeric_columns': scaling_numeric_columns
             },
+
+            'maketimefeature': {
+                'flag': maketimefeature,
+                'time_columns': makefeature_time_columns,
+                'list_of_feature': maketimefeature_list_of_feature
+            },
             'outlier': {
                 'flag': outlier,
                 'methods': outlier_method,
                 'contamination': outlier_contamination
+            },
+
+            'makenonlinearfeature': {
+                'flag': makenonlinearfeature,
+                "polynomial_columns": makenonlinearfeature_polynomial_columns,
+                "degree": makenonlinearfeature_degree,
+                "interaction_only": makenonlinearfeature_intergration_only,
+                "include_bias": makenonlinearfeature_include_bias,
+                "other_nonlinear_feature": makenonlinearfeature_other_nonlinear_feature
             },
             'rfe': {
                 'flag': rfe,

@@ -32,6 +32,7 @@ class Classification(object):
         X, y = Preprocess().fit_transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
         y = pd.DataFrame(y).reset_index(drop=True)
+        print('X: ', X )
         self.X = X
         self.y = y
 
