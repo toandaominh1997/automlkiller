@@ -146,7 +146,7 @@ class Classification(object):
                     y,
                     estimator = None,
                     fold = None,
-                    n_iter = 10,
+                    n_iter = 2,
                     optimize = 'accuracy',
                     search_library: str = 'optuna',
                     search_algorithm = 'random',
