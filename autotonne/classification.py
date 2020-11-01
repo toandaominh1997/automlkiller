@@ -58,7 +58,7 @@ class Classification(object):
 
         if sort is None:
             sort = scoring[0]
-        score_models = {}
+
         for name_model in ModelFactory.name_registry:
             if str(estimator) in name_model:
                 if name_model in estimator_params.keys():
@@ -82,13 +82,11 @@ class Classification(object):
                 name_model = ''.join(name_model.split('-')[1:])
                 for key, values in scores.items():
                     for i, value in enumerate(values):
-                        if name_model not in score_models.keys():
-                            score_models[name_model] = {}
-                        score_models[name_model][key + "_{}fold".format(i + 1)] = value
+                        if name_model not in self.metrics.keys():
+                            self.metrics[name_model] = {}
+                        self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
 
-        score_models = pd.read_json(json.dumps(score_models))
-        print('score_models: ', score_models)
-        return score_models
+        return self
 
 
     def compare_model(self,
@@ -108,7 +106,6 @@ class Classification(object):
         y = pd.DataFrame(y).reset_index(drop=True)
         if sort is None:
             sort = scoring[0]
-        score_models = {}
         for name_model in ModelFactory.name_registry:
             if 'classification' in name_model:
                 if name_model in estimator_params.keys():
@@ -132,14 +129,11 @@ class Classification(object):
                 name_model = ''.join(name_model.split('-')[1:])
                 for key, values in scores.items():
                     for i, value in enumerate(values):
-                        if name_model not in score_models.keys():
-                            score_models[name_model] = {}
-                        score_models[name_model][key + "_{}fold".format(i + 1)] = value
+                        if name_model not in self.metrics.keys():
+                            self.metrics[name_model] = {}
+                        self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
 
-        score_models = pd.read_json(json.dumps(score_models))
-        print('score_models: ', score_models)
-        return score_models
-
+        return self
 
 
     def tune_model(self,
@@ -330,13 +324,10 @@ class Classification(object):
             name_model = ''.join(name_model.split('-')[1:])
             for key, values in scores.items():
                 for i, value in enumerate(values):
-                    if name_model not in score_models.keys():
-                        score_models[name_model] = {}
-                    score_models[name_model][key + "_{}fold".format(i + 1)] = value
-
-        score_models = pd.read_json(json.dumps(score_models))
-        print('score_models: ', score_models)
-        return score_models
+                    if name_model not in self.metrics.keys():
+                        self.metrics[name_model] = {}
+                    self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+        return self
     def voting_model(self,
                      X,
                      y,
@@ -416,13 +407,10 @@ class Classification(object):
         name_model = ''.join(name_model.split('-')[1:])
         for key, values in scores.items():
             for i, value in enumerate(values):
-                if name_model not in score_models.keys():
-                    score_models[name_model] = {}
-                score_models[name_model][key + "_{}fold".format(i + 1)] = value
-
-        score_models = pd.read_json(json.dumps(score_models))
-        print('score_models: ', score_models)
-        return score_models
+                if name_model not in self.metrics.keys():
+                    self.metrics[name_model] = {}
+                self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+        return self
 
     def stacking_model(self,
                      X,
@@ -492,13 +480,14 @@ class Classification(object):
         name_model = ''.join(name_model.split('-')[1:])
         for key, values in scores.items():
             for i, value in enumerate(values):
-                if name_model not in score_models.keys():
-                    score_models[name_model] = {}
-                score_models[name_model][key + "_{}fold".format(i + 1)] = value
-
-        score_models = pd.read_json(json.dumps(score_models))
-        print('score_models: ', score_models)
-        return score_models
+                if name_model not in self.metrics.keys():
+                    self.metrics[name_model] = {}
+                self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+        return self
+    def report_classification(self):
+        scores = pd.read_json(json.dumps(self.metrics))
+        print('score_models: ', scores)
+        return scores
 
 
 
