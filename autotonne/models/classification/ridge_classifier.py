@@ -19,4 +19,8 @@ class RidgeClassifierContainer(RidgeClassifier):
 
         self.tune_grid = tune_grid
         self.tune_distributions = tune_distributions
-        self.estimator = RidgeClassifier(**kwargs)
+        self.estimator = RidgeClassification(**kwargs)
+
+class RidgeClassification(RidgeClassifier):
+    def predict_proba(self, X):
+        return self.predict(X)

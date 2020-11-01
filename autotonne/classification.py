@@ -79,7 +79,8 @@ class Classification(object):
                                                                 verbose = verbose,
                                                                 fit_params = fit_params,
                                                                 return_train_score = True,
-                                                                return_estimator = True)
+                                                                return_estimator = True,
+                                                                error_score=-1)
                 self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
                 scores.pop('estimator')
                 name_model = ''.join(name_model.split('-')[1:])
@@ -107,6 +108,7 @@ class Classification(object):
         for name_model in ModelFactory.name_registry:
             if 'classification' in name_model:
                 if name_model in estimator_params.keys():
+                    LOGGER.info(f'Load estimator_params with {name_model}')
                     estimator_param = estimator_params[name_model]
                 else:
                     estimator_param = estimator_params
@@ -121,7 +123,8 @@ class Classification(object):
                                                                 verbose = verbose,
                                                                 fit_params = fit_params,
                                                                 return_train_score = True,
-                                                                return_estimator = True)
+                                                                return_estimator = True,
+                                                                error_score=-1)
                 self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
                 scores.pop('estimator')
                 name_model = ''.join(name_model.split('-')[1:])
@@ -136,7 +139,6 @@ class Classification(object):
 
     def tune_model(self,
                     estimator = None,
-                    fold = None,
                     n_iter = 2,
                     optimize = 'accuracy',
                     search_library: str = 'optuna',
@@ -148,7 +150,7 @@ class Classification(object):
                     ):
         X = self.X
         y = self.y
-        LOGGER.info('tune models')
+        LOGGER.info('TUNE MODEL')
         best_params_model = {}
         model_grid = None
 
@@ -192,10 +194,10 @@ class Classification(object):
                 try:
                     param_grid = get_optuna_distributions(parameter_distributions)
                 except:
-                    logger.warning(
+                    LOGGER.warn(
                         "Couldn't convert param_grid to specific library distributions. Exception:"
                     )
-                    logger.warning(traceback.format_exc())
+                    LOGGER.warn(traceback.format_exc())
                 study = optuna.create_study(
                     direction = 'maximize', sampler = sampler, pruner = pruner
                 )
@@ -305,7 +307,8 @@ class Classification(object):
                                                             verbose = verbose,
                                                             fit_params = fit_params,
                                                             return_train_score = True,
-                                                            return_estimator = True)
+                                                            return_estimator = True,
+                                                            error_score=-1)
             self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
             scores.pop('estimator')
             name_model = ''.join(name_model.split('-')[1:])
@@ -369,7 +372,8 @@ class Classification(object):
                                                 verbose = verbose,
                                                 fit_params = fit_params,
                                                 return_train_score = True,
-                                                return_estimator = True)
+                                                return_estimator = True,
+                                                error_score=-1)
         except:
             LOGGER.warn('TRY hard voting')
             estimator = VotingClassifier(estimators= model_voting,
@@ -383,7 +387,8 @@ class Classification(object):
                                                 verbose = verbose,
                                                 fit_params = fit_params,
                                                 return_train_score = True,
-                                                return_estimator = True)
+                                                return_estimator = True,
+                                                error_score=-1)
         self.estimator['classification-votingclassifer'] = scores['estimator'][np.argmax(scores['test_'+sort])]
         scores.pop('estimator')
         name_model = ''.join(name_model.split('-')[1:])
@@ -435,7 +440,7 @@ class Classification(object):
             except:
                 estimator = model
             model_voting.append((name_model, estimator))
-        name_model = 'classification-votingclassifer'
+        name_model = 'classification-stacking_model'
         LOGGER.info('TRY STACKING MODEL')
         estimator = StackingClassifier(estimators= model_voting,
                                        final_estimator=final_estimator,
@@ -451,7 +456,8 @@ class Classification(object):
                                             verbose = verbose,
                                             fit_params = fit_params,
                                             return_train_score = True,
-                                            return_estimator = True)
+                                            return_estimator = True,
+                                            error_score=-1)
         self.estimator['classification-stackingclassifer'] = scores['estimator'][np.argmax(scores['test_'+sort])]
         scores.pop('estimator')
         name_model = ''.join(name_model.split('-')[1:])
@@ -462,8 +468,8 @@ class Classification(object):
                 self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
     def report_classification(self):
+        print('metrics: ', self.metrics)
         scores = pd.read_json(json.dumps(self.metrics))
-        print('score_models: ', scores)
         return scores
 
 

@@ -3,7 +3,7 @@ from autotonne.models.model_factory import ModelFactory
 from autotonne.utils import np_list_arange, IntUniformDistribution, UniformDistribution
 @ModelFactory.register('classification-catboostclassifier')
 class CatBoostClassifierContainer(CatBoostClassifier):
-    def __init__(self, **kwargs):
+    def __init__(self, logging_level = 'Silent', **kwargs):
         super(CatBoostClassifierContainer, self).__init__(**kwargs)
         tune_grid = {
             "depth": list(range(1, 12)),
@@ -19,4 +19,4 @@ class CatBoostClassifierContainer(CatBoostClassifier):
         }
         self.tune_grid = tune_grid
         self.tune_distributions = tune_distributions
-        self.estimator = CatBoostClassifier(**kwargs)
+        self.estimator = CatBoostClassifier(logging_level=logging_level, **kwargs)

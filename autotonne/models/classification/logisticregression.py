@@ -1,11 +1,9 @@
 from sklearn.linear_model import LogisticRegression
 from autotonne.models.model_factory import ModelFactory
-from autotonne.utils.distributions import np_list_arange, UniformDistribution
+from autotonne.utils.distributions import np_list_arange, UniformDistribution, IntUniformDistribution
 @ModelFactory.register('classification-logisticregression')
-class LogisticRegressionContainer(LogisticRegression):
+class LogisticRegressionContainer():
     def __init__(self, **kwargs):
-        super(LogisticRegressionContainer, self).__init__(**kwargs)
-
         tune_grid = {}
         tune_distributions = {}
         tune_grid['penalty'] = ["l2", "none"]
@@ -15,5 +13,5 @@ class LogisticRegressionContainer(LogisticRegression):
         self.tune_grid = tune_grid
 
         self.tune_distributions = tune_distributions
-        self.estimator = LogisticRegression()
+        self.estimator = LogisticRegression(**kwargs)
 
