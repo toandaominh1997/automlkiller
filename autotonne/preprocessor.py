@@ -151,6 +151,10 @@ class Preprocess(object):
     def fit(self, X, y = None, **fit_params):
         X = X.copy()
         y = y.copy()
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame(X)
+        if isinstance(y, pd.Series):
+            y = pd.DataFrame(y)
         X.columns = [str(col) for col in X.columns.tolist()]
         y.columns = [str(col) for col in y.columns.tolist()]
         X = X.loc[:, ~X.columns.duplicated()]
@@ -161,6 +165,10 @@ class Preprocess(object):
     def transform(self, X, y = None, **fit_params):
         X = X.copy()
         y = y.copy()
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame(X)
+        if isinstance(y, pd.Series):
+            y = pd.DataFrame(y)
         X.columns = [str(col) for col in X.columns.tolist()]
         y.columns = [str(col) for col in y.columns.tolist()]
         X = X.loc[:, ~X.columns.duplicated()]
