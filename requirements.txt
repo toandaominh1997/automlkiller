@@ -3,8 +3,7 @@ pandas
 scikit-learn
 pyod
 category-encoders
-torch
-tensorflow
+xgboost
 catboost
 lightgbm
 pandas-profiling
