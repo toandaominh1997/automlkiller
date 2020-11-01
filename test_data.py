@@ -18,15 +18,12 @@ if __name__ =='__main__':
         groupsimilarfeature = False
     )
     # obj.create_model(estimator=['lgbmclassifier', 'kneighborsclassifier'])
-    obj.compare_model(scoring=['balanced_accuracy', 'roc_auc_ovr', 'f1_micro'])
+    obj.compare_model(scoring=['f1_micro'])
     print(obj.report_classification())
     estimator_params = obj.tune_model()
-    obj.compare_model(scoring=['balanced_accuracy', 'roc_auc_ovr', 'f1_micro'],
+    obj.compare_model(scoring=['f1_micro'],
                       estimator_params = estimator_params)
-    obj.ensemble_model(scoring=['balanced_accuracy', 'roc_auc_ovr', 'f1_micro'])
-    print(obj.report_classification())
-    obj.voting_model(scoring=['balanced_accuracy', 'roc_auc_ovr', 'f1_micro'])
-    print(obj.report_classification())
-    obj.stacking_model(scoring=['balanced_accuracy', 'roc_auc_ovr', 'f1_micro'])
-    print(obj.report_classification())
-    obj.report_classification().to_csv('./data/report.csv')
+    obj.ensemble_model(scoring=['f1_micro'])
+    obj.voting_model(scoring=['f1_micro'])
+    obj.stacking_model(scoring=['f1_micro'])
+    obj.report_classification(sort_by = 'test_f1_micro_1fold').to_csv('./data/report.csv')

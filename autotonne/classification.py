@@ -467,18 +467,12 @@ class Classification(object):
                     self.metrics[name_model] = {}
                 self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
-    def report_classification(self):
-        print('metrics: ', self.metrics)
-        scores = pd.read_json(json.dumps(self.metrics))
+    def report_classification(self, sort_by=None):
+        scores = pd.DataFrame.from_dict(self.metrics, orient = 'index')
+        if sort_by is not None:
+            scores = scores.sort_values(by = sort_by, ascending=False)
         return scores
 
 
 
 
-if __name__=='__main__':
-    X, y = make_classification(n_samples=100000, n_features=50)
-    data = pd.DataFrame(X)
-    data['target'] = y
-    obj = Classification(data = data, target='target')
-    obj.create_model(estimator = 'LGBM')
-    # obj.tune_models()

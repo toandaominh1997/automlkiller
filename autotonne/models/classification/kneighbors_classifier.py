@@ -10,12 +10,12 @@ class KNeighborsClassifierContainer(KNeighborsClassifier):
         tune_distributions = {}
 
         # common
-        tune_grid["n_neighbors"] = range(1, 51)
+        tune_grid["n_neighbors"] = range(1, 30)
         tune_grid["weights"] = ["uniform"]
         tune_grid["metric"] = ["minkowski", "euclidean", "manhattan"]
 
 
-        tune_distributions["n_neighbors"] = IntUniformDistribution(1, 51)
+        tune_distributions["n_neighbors"] = IntUniformDistribution(1, 30)
 
         self.tune_grid = tune_grid
         self.tune_distributions = tune_distributions
