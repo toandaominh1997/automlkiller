@@ -36,6 +36,38 @@ class Classification(object):
         self.X = X
         self.y = y
 
+    def create_models(self,
+                      estimator,
+                      fold = None,
+                      round = 4,
+                      cross_validation = True,
+                      n_splits: int  = 2,
+                      fit_kwargs = None,
+                      group = None,
+                      verbose = True,
+                      **kwargs):
+        X = self.X
+        y = self.y
+        skf = StratifiedKFold(n_splits=n_splits)
+        score_model = ClassificationMetricContainer()
+        for name_model in ModelFactory.name_registry:
+            if estimator in name_model:
+                model = ModelFactory.create_executor(name_model, kwargs)
+                estimator = model.estimator
+                for train_index, test_index  in skf.split(X, y):
+                    X_train, X_test = X.loc[train_index], X.loc[test_index]
+                    y_train, y_test = y.loc[train_index], y.loc[test_index]
+                    estimator.fit(X = X_train, y = y_train, **fit_kwargs)
+                    score_model.classification_report(y_test, estimator.predict(X_test))
+                    try:
+                        score_model.classification_report_proba(y_test, estimator.predict_proba(X_test)[:, 1])
+                    except:
+                        LOGGER.warn('{} has no attribute predict proba'.format(name_model))
+        score_model.score_mean()
+        print('score_model: ', score_model.score_mean())
+        return score_model
+
+
     def compare_models(self,
                        cross_validation: bool = True,
                        n_splits: int = 2,
@@ -177,5 +209,6 @@ if __name__=='__main__':
     X, y = make_classification(n_samples=100000, n_features=50)
     data = pd.DataFrame(X)
     data['target'] = y
-    obj = Classification(data = data, target='target').compare_models()
-    obj.tune_models()
+    obj = Classification(data = data, target='target')
+    obj.create_models(estimator = 'LGBM')
+    # obj.tune_models()

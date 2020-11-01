@@ -20,7 +20,8 @@ def main():
     df = df.loc[:, columns].head(1000)
     print(df.head())
     obj = Classification(data = df, target='Age')
-    obj.compare_models()
-    obj.tune_models()
+    obj.create_models(estimator='LGBM')
+    # obj.compare_models()
+    # obj.tune_models()
 if __name__ =='__main__':
     main()
