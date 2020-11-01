@@ -22,6 +22,8 @@ from autotonne.utils.distributions import get_optuna_distributions
 from autotonne.utils import LOGGER, can_early_stop
 class Classification(object):
     def __init__(self,
+                 X,
+                 y,
                  preprocess: bool = True,
                  **kwargs
                  ):
@@ -30,12 +32,17 @@ class Classification(object):
         print(kwargs)
         if self.preprocess == True:
             self.preprocessor = Preprocess(**kwargs)
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        self.X = X
+        self.y = y
         self.estimator = {}
         self.metrics = {}
 
     def create_model(self,
-                      X,
-                      y,
                       estimator,
                       cv: int  = 2,
                       scoring = ['roc_auc_ovr'],
@@ -50,12 +57,8 @@ class Classification(object):
         **kwargs:
             Additional keyword arguments to pass to the estimator.
         """
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
-
+        X = self.X
+        y = self.y
         if sort is None:
             sort = scoring[0]
 
@@ -90,8 +93,6 @@ class Classification(object):
 
 
     def compare_model(self,
-                        X,
-                        y,
                         cv: int  = 2,
                         scoring = ['roc_auc_ovr'],
                         sort = None,
@@ -99,11 +100,8 @@ class Classification(object):
                         n_jobs = -1,
                         verbose = False,
                         estimator_params = {}):
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
+        X = self.X
+        y = self.y
         if sort is None:
             sort = scoring[0]
         for name_model in ModelFactory.name_registry:
@@ -137,8 +135,6 @@ class Classification(object):
 
 
     def tune_model(self,
-                    X,
-                    y,
                     estimator = None,
                     fold = None,
                     n_iter = 2,
@@ -150,11 +146,8 @@ class Classification(object):
                     verbose = True,
                     n_jobs = -1
                     ):
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
+        X = self.X
+        y = self.y
         LOGGER.info('tune models')
         best_params_model = {}
         model_grid = None
@@ -252,8 +245,6 @@ class Classification(object):
             best_params_model[name_model] = best_params
         return best_params_model
     def ensemble_model(self,
-                       X,
-                       y,
                        estimator = None,
                        method = 'bagging',
                        n_estimators = 2,
@@ -264,12 +255,8 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
+        X = self.X
+        y = self.y
         LOGGER.info('ensemble models')
 
         if sort is None:
@@ -329,8 +316,6 @@ class Classification(object):
                     self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
     def voting_model(self,
-                     X,
-                     y,
                      estimator = None,
                        cv = 2,
                        scoring = ['roc_auc_ovr'],
@@ -339,11 +324,8 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
+        X = self.X
+        y = self.y
         LOGGER.info('VOTING MODELs')
 
         if sort is None:
@@ -413,8 +395,6 @@ class Classification(object):
         return self
 
     def stacking_model(self,
-                     X,
-                     y,
                      estimator = None,
                     final_estimator = sklearn.linear_model.LogisticRegression(),
                        cv = 2,
@@ -424,11 +404,8 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-        if self.preprocess == True:
-            self.preprocessor.fit(X, y)
-            X, y = self.preprocessor.transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
+        X = self.X
+        y = self.y
         LOGGER.info('VOTING MODELs')
 
         if sort is None:

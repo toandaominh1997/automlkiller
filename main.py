@@ -23,29 +23,26 @@ def main():
     X = df.drop(columns = ['Age'])
     y = df['Age']
     print('value_counts: ', y.value_counts())
-    obj = Classification(
+    obj = Classification(X, y,
         groupsimilarfeature = True
     )
-    obj.create_model(X, y, estimator='lgbm')
+    obj.create_model(estimator='lgbm')
     print('estimator', obj.estimator)
-    obj.compare_model(X, y)
+    obj.compare_model()
     obj.report_classification()
-    obj.ensemble_model(X, y, estimator = None)
-    obj.ensemble_model(X, y,
-                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
-    obj.voting_model(X, y)
-    obj.voting_model(X, y,
-                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
-    obj.stacking_model(X, y,
-                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
+    obj.ensemble_model(estimator = None)
+    obj.ensemble_model(estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
+    obj.voting_model()
+    obj.voting_model(estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
+    obj.stacking_model(estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
     obj.report_classification()
     # best_params = obj.tune_model(X, y, estimator=None)
     # print('BEST_PARAMS: ', best_params)
-    best_params = obj.tune_model(X, y, estimator=['classification-lgbmclassifier'])
+    best_params = obj.tune_model(estimator=['classification-lgbmclassifier'])
     print('BEST_PARAMS: ', best_params)
 
     print('INFOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo')
-    obj.create_model(X, y, estimator='classification-lgbmclassifier', estimator_params=best_params)
+    obj.create_model(estimator='classification-lgbmclassifier', estimator_params=best_params)
     save_model(obj, os.path.join(os.getcwd(), 'data/modeling.pkl'))
     load_model(model_path = os.path.join(os.getcwd(), 'data/modeling.pkl'))
 if __name__ =='__main__':
