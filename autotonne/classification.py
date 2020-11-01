@@ -42,8 +42,8 @@ class Classification(object):
             X, y = self.preprocessor.transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
         y = pd.DataFrame(y).reset_index(drop=True)
-        self.X = X.values.reshape(len(X), -1)
-        self.y = y.values.ravel()
+        self.X = X
+        self.y = y
         self.estimator = {}
         self.metrics = {}
 
