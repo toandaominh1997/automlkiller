@@ -33,7 +33,8 @@ class DataTypes(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT DATATYPE')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         X.replace([np.inf, -np.inf], np.NaN, inplace=True)
         X.columns = [str(col) for col in X.columns]
         for col in X.select_dtypes(include=['object']).columns:
@@ -98,7 +99,8 @@ class DataTypes(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM DATATYPE')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         X.replace([np.inf, -np.inf], np.nan, inplace=True)
         X.columns = [str(col) for col in X.columns]
         X = X.astype(self.learned_dtypes)
@@ -130,6 +132,8 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT SIMPLE IMPUTER')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         self.numeric_columns = [str(col) for col in X.select_dtypes(include=[np.number]).columns.tolist()]
         self.categorical_columns = [str(col) for col in X.select_dtypes(include=['object', 'category']).columns.tolist()]
         self.time_columns = [str(col) for col in X.select_dtypes(include=['datetime64[ns]']).columns.tolist()]
@@ -148,6 +152,8 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM SIMPLE IMPUTER')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if len(self.numeric_columns) > 0:
             X.loc[:, self.numeric_columns] = self.numeric_imputer.transform(X.loc[:, self.numeric_columns])
         if len(self.categorical_columns) > 0:
@@ -172,7 +178,8 @@ class ZeroNearZeroVariance(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT ZERO AND NEARZERO Variance')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
 
         for col in X.columns:
             u = pd.DataFrame(X[col].value_counts()).sort_values(by=col, ascending = False, inplace = False)
@@ -189,12 +196,14 @@ class ZeroNearZeroVariance(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM ZERO and NEARZERO Variance')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         X = X.drop(columns = self.to_drop)
         return X, y
     def fit_transform(self, X, y = None):
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         self.fit(X, y)
         return self.transform(X, y)
 
@@ -206,12 +215,18 @@ class CategoryEncoder(BaseEstimator, TransformerMixin):
         self.method = method
     def fit(self, X, y = None):
         LOGGER.info('FIT Category-Encoder')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
         if len(self.cols) == 0:
             self.cols = X.select_dtypes(include=['category', 'object']).columns.tolist()
         self.encoder = self.choose_method(cols = self.cols, method = self.method)
         self.encoder.fit(X, y)
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM Category-Encoder')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
         X = self.encoder.transform(X)
         return X, y
     def fit_transform(self, X, y = None):
@@ -266,12 +281,14 @@ class GroupSimilarFeature(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT GroupSimilarFeature')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         return self
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM GroupSimilarFeature')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         if len(self.list_of_group_feature) > 0:
             for f, g in zip(self.list_of_group_feature, self.group_name):
                 X[g+"_min"] = X[f].apply(np.min, 1)
@@ -283,7 +300,8 @@ class GroupSimilarFeature(BaseEstimator, TransformerMixin):
         return X, y
     def fit_transform(self, X, y = None):
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
         self.fit(X, y)
         return self.transform(X, y)
 
@@ -297,6 +315,8 @@ class Binning(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT BINNING')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if len(self.features_to_discretize) > 0:
             for col in self.features_to_discretize:
                 hist, bin_edg = np.histogram(X[col], bins = 'sturges')
@@ -306,7 +326,10 @@ class Binning(BaseEstimator, TransformerMixin):
                                                                strategy='kmeans').fit(X[self.features_to_discretize])
         return self
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM BINNING')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if len(self.features_to_discretize) > 0:
             X[self.features_to_discretize] = self.disc.transform(X[self.features_to_discretize])
 
@@ -320,6 +343,8 @@ class Scaling(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT SCALING')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return self
         if len(self.numeric_columns) == 0:
@@ -341,6 +366,8 @@ class Scaling(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM SCALING')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if isinstance(self.numeric_columns, str) and self.numeric_columns == 'not_available':
             return X
         X.loc[:, self.numeric_columns] = self.scale.transform(X.loc[:, self.numeric_columns])
@@ -360,11 +387,16 @@ class MakeTimeFeature(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT MakeTimeFeature')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if not self.time_columns:
             self.time_columns = X.select_dtypes(include = ['datetime64[ns]']).columns.tolist()
         return self
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM MakeTimeFeature')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
         for col in self.time_columns:
             if 'hour' in self.list_of_feature:
                 X[col+"_hour"] = X[col].dt.hour
@@ -392,6 +424,8 @@ class Outlier(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT OUTLIER')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         self.outlier = []
         if "knn" in self.methods:
             knn = pyod.models.knn.KNN(contamination = self.contamination)
@@ -407,6 +441,8 @@ class Outlier(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM OUTLIER')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         X['vote_outlier'] = 0
         for out in self.outlier:
             X['vote_outlier'] += out.fit_predict(X.drop(columns=['vote_outlier']))
@@ -439,6 +475,8 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
                                                              include_bias=include_bias)
     def fit(self, X, y):
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         LOGGER.info('FIT MakeNonLinearFeature')
         if len(self.polynomial_columns) == 0:
             self.polynomial_columns = X.select_dtypes(include=[np.number]).columns
@@ -448,7 +486,8 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
     def transform(self, X, y):
         LOGGER.info('TRANSFORM MakeNonLinearFeature')
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
 
         if len(self.polynomial_columns) > 0:
             self.poly.fit(X[self.polynomial_columns])
@@ -483,6 +522,8 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT REDUCE CATEGORICAL WITH COUNT')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         self.data_count = {}
         for col in self.categorical_columns:
             if col not in self.data_count.keys():
@@ -490,6 +531,9 @@ class ReduceCategoricalWithCount(BaseEstimator, TransformerMixin):
             self.data_count[col] = X[col].value_counts().to_dict()
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM REDUCE CATEGORICAL WITH COUNT')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
         for col in self.categorical_columns:
             X[col].replace(self.data_count[col].keys(), self.data_count[col].values(), inplace=True)
         return X, y
@@ -510,10 +554,14 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
             self.selector = sklearn.feature_selection.RFECV(estimator=estimator, step = step, min_features_to_select=min_features_to_select, cv = cv, n_jobs=-1)
     def fit(self, X, y = None):
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         self.selector.fit(X, y)
         return self
     def transform(self, X, y = None):
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         X = X.loc[:, self.selector.support_]
         return X, y
     def fit_transform(self, X, y = None):
@@ -536,6 +584,8 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT REDUCE DIMENSION')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         if self.method == 'pca_linear':
             self.model = sklearn.decomposition.PCA(self.n_components, random_state=self.random_state).fit(X)
         if self.method == 'kernal_pca':
@@ -548,6 +598,8 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM REDUCE DIMENSION')
         X = X.copy()
+        if y is not None:
+            y = y.copy()
         X = self.model.transform(X)
         return X, y
     def fit_transform(self, X, y = None):

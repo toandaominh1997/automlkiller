@@ -150,13 +150,14 @@ class Preprocess(object):
 
     def fit(self, X, y = None, **fit_params):
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
+            if isinstance(y, pd.Series):
+                y = pd.DataFrame(y)
+            y.columns = [str(col) for col in y.columns.tolist()]
         if isinstance(X, pd.Series):
             X = pd.DataFrame(X)
-        if isinstance(y, pd.Series):
-            y = pd.DataFrame(y)
         X.columns = [str(col) for col in X.columns.tolist()]
-        y.columns = [str(col) for col in y.columns.tolist()]
         X = X.loc[:, ~X.columns.duplicated()]
         X.dropna(axis=1, how='all', inplace=True)
         for obj in self.preprocess_objs:
@@ -164,13 +165,15 @@ class Preprocess(object):
 
     def transform(self, X, y = None, **fit_params):
         X = X.copy()
-        y = y.copy()
+        if y is not None:
+            y = y.copy()
+            if isinstance(y, pd.Series):
+                y = pd.DataFrame(y)
+            y.columns = [str(col) for col in y.columns.tolist()]
+
         if isinstance(X, pd.Series):
             X = pd.DataFrame(X)
-        if isinstance(y, pd.Series):
-            y = pd.DataFrame(y)
         X.columns = [str(col) for col in X.columns.tolist()]
-        y.columns = [str(col) for col in y.columns.tolist()]
         X = X.loc[:, ~X.columns.duplicated()]
         X.dropna(axis=1, how='all', inplace=True)
         data = X, y
