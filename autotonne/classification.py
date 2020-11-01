@@ -7,11 +7,11 @@ import sklearn
 from sklearn.datasets import make_classification
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
+from sklearn.ensemble import BaggingClassifier, AdaBoostClassifier, VotingClassifier, StackingClassifier
 
 from autotonne.preprocessor import Preprocess
 from autotonne.models.model_factory import ModelFactory
 from autotonne.models.classification import *
-from autotonne.metrics.classification import ClassificationMetricContainer
 
 #Tuning
 import optuna
@@ -31,6 +31,7 @@ class Classification(object):
         if self.preprocess == True:
             self.preprocessor = Preprocess(**kwargs)
         self.estimator = {}
+        self.metrics = {}
 
     def create_model(self,
                       X,
@@ -256,6 +257,249 @@ class Classification(object):
             LOGGER.info('best_params: {}'.format(best_params))
             best_params_model[name_model] = best_params
         return best_params_model
+    def ensemble_model(self,
+                       X,
+                       y,
+                       estimator = None,
+                       method = 'bagging',
+                       n_estimators = 2,
+                       cv = 2,
+                       scoring = ['roc_auc_ovr'],
+                       sort = None,
+                       fit_params = {},
+                       verbose = True,
+                       estimator_params = {},
+                       n_jobs = -1):
+
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        LOGGER.info('ensemble models')
+
+        if sort is None:
+            sort = scoring[0]
+        score_models = {}
+        estimator_ensemble = {}
+        if estimator is None:
+            if len(self.estimator.keys()) > 0:
+                for name_model, estimator in self.estimator.items():
+                    estimator_ensemble[name_model] = estimator
+            else:
+                for name_model in ModelFactory.name_registry:
+                    if name_model in estimator_params.keys():
+                        estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    else:
+                        estimator_ensemble[name_model] = ModelFactory.create_executor(name_model)
+        else:
+            for name_model in estimator:
+                if name_model in estimator_params.keys():
+                    estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                else:
+                    estimator_ensemble[name_model] = ModelFactory.create_executor(name_model)
+
+        for name_model, model in estimator_ensemble.items():
+            try:
+                estimator = model.estimator
+            except:
+                estimator = model
+            if method == 'bagging':
+                LOGGER.info('Initializing BaggingClassifer')
+                estimator = BaggingClassifier(base_estimator=estimator,
+                                                               n_estimators=n_estimators,
+                                                               random_state=0)
+            elif method == 'adaboost':
+                LOGGER.info('Initializing AdaBoostClassifier')
+                estimator = AdaBoostClassifier(base_estimator=estimator,
+                                                                n_estimators=n_estimators,
+                                                                random_state=0)
+
+            scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                            X = X,
+                                                            y = y,
+                                                            scoring=scoring,
+                                                            cv = cv,
+                                                            n_jobs = n_jobs,
+                                                            verbose = verbose,
+                                                            fit_params = fit_params,
+                                                            return_train_score = True,
+                                                            return_estimator = True)
+            self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
+            scores.pop('estimator')
+            name_model = ''.join(name_model.split('-')[1:])
+            for key, values in scores.items():
+                for i, value in enumerate(values):
+                    if name_model not in score_models.keys():
+                        score_models[name_model] = {}
+                    score_models[name_model][key + "_{}fold".format(i + 1)] = value
+
+        score_models = pd.read_json(json.dumps(score_models))
+        print('score_models: ', score_models)
+        return score_models
+    def voting_model(self,
+                     X,
+                     y,
+                     estimator = None,
+                       cv = 2,
+                       scoring = ['roc_auc_ovr'],
+                       sort = None,
+                       fit_params = {},
+                       verbose = True,
+                       estimator_params = {},
+                       n_jobs = -1):
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        LOGGER.info('VOTING MODELs')
+
+        if sort is None:
+            sort = scoring[0]
+        score_models = {}
+        estimator_voting = {}
+        if estimator is None:
+            if len(self.estimator.keys()) > 0:
+                for name_model, estimator in self.estimator.items():
+                    estimator_voting[name_model] = estimator
+            else:
+                for name_model in ModelFactory.name_registry:
+                    if name_model in estimator_params.keys():
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    else:
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model)
+        else:
+            for name_model in estimator:
+                if name_model in estimator_params.keys():
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                else:
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model)
+        model_voting = []
+        for name_model, model in estimator_voting.items():
+            try:
+                estimator = model.estimator
+            except:
+                estimator = model
+            model_voting.append((name_model, estimator))
+        name_model = 'classification-votingclassifer'
+        try:
+            LOGGER.info('TRY soft voting')
+            estimator = VotingClassifier(estimators= model_voting,
+                                     voting='soft')
+            scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                X = X,
+                                                y = y,
+                                                scoring=scoring,
+                                                cv = cv,
+                                                n_jobs = n_jobs,
+                                                verbose = verbose,
+                                                fit_params = fit_params,
+                                                return_train_score = True,
+                                                return_estimator = True)
+        except:
+            LOGGER.warn('TRY hard voting')
+            estimator = VotingClassifier(estimators= model_voting,
+                                     voting='hard')
+            scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                X = X,
+                                                y = y,
+                                                scoring=scoring,
+                                                cv = cv,
+                                                n_jobs = n_jobs,
+                                                verbose = verbose,
+                                                fit_params = fit_params,
+                                                return_train_score = True,
+                                                return_estimator = True)
+        self.estimator['classification-votingclassifer'] = scores['estimator'][np.argmax(scores['test_'+sort])]
+        scores.pop('estimator')
+        name_model = ''.join(name_model.split('-')[1:])
+        for key, values in scores.items():
+            for i, value in enumerate(values):
+                if name_model not in score_models.keys():
+                    score_models[name_model] = {}
+                score_models[name_model][key + "_{}fold".format(i + 1)] = value
+
+        score_models = pd.read_json(json.dumps(score_models))
+        print('score_models: ', score_models)
+        return score_models
+
+    def stacking_model(self,
+                     X,
+                     y,
+                     estimator = None,
+                    final_estimator = sklearn.linear_model.LogisticRegression(),
+                       cv = 2,
+                       scoring = ['roc_auc_ovr'],
+                       sort = None,
+                       fit_params = {},
+                       verbose = True,
+                       estimator_params = {},
+                       n_jobs = -1):
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        LOGGER.info('VOTING MODELs')
+
+        if sort is None:
+            sort = scoring[0]
+        score_models = {}
+        estimator_voting = {}
+        if estimator is None:
+            if len(self.estimator.keys()) > 0:
+                for name_model, estimator in self.estimator.items():
+                    estimator_voting[name_model] = estimator
+            else:
+                for name_model in ModelFactory.name_registry:
+                    if name_model in estimator_params.keys():
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    else:
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model)
+        else:
+            for name_model in estimator:
+                if name_model in estimator_params.keys():
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                else:
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model)
+        model_voting = []
+        for name_model, model in estimator_voting.items():
+            try:
+                estimator = model.estimator
+            except:
+                estimator = model
+            model_voting.append((name_model, estimator))
+        name_model = 'classification-votingclassifer'
+        LOGGER.info('TRY STACKING MODEL')
+        estimator = StackingClassifier(estimators= model_voting,
+                                       final_estimator=final_estimator,
+                                       cv = cv,
+                                       n_jobs= n_jobs,
+                                       verbose=verbose)
+        scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                            X = X,
+                                            y = y,
+                                            scoring=scoring,
+                                            cv = cv,
+                                            n_jobs = n_jobs,
+                                            verbose = verbose,
+                                            fit_params = fit_params,
+                                            return_train_score = True,
+                                            return_estimator = True)
+        self.estimator['classification-stackingclassifer'] = scores['estimator'][np.argmax(scores['test_'+sort])]
+        scores.pop('estimator')
+        name_model = ''.join(name_model.split('-')[1:])
+        for key, values in scores.items():
+            for i, value in enumerate(values):
+                if name_model not in score_models.keys():
+                    score_models[name_model] = {}
+                score_models[name_model][key + "_{}fold".format(i + 1)] = value
+
+        score_models = pd.read_json(json.dumps(score_models))
+        print('score_models: ', score_models)
+        return score_models
+
 
 
 

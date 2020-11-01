@@ -29,6 +29,14 @@ def main():
     obj.create_model(X, y, estimator='lgbm')
     print('estimator', obj.estimator)
     obj.compare_model(X, y)
+    obj.ensemble_model(X, y, estimator = None)
+    obj.ensemble_model(X, y,
+                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
+    obj.voting_model(X, y)
+    obj.voting_model(X, y,
+                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
+    obj.stacking_model(X, y,
+                       estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
     # best_params = obj.tune_model(X, y, estimator=None)
     # print('BEST_PARAMS: ', best_params)
     best_params = obj.tune_model(X, y, estimator=['classification-lgbmclassifier'])
