@@ -110,8 +110,6 @@ class DataTypes(BaseEstimator, TransformerMixin):
         X.dropna(axis = 0, how='all', inplace = True)
         X.dropna(axis = 1, how = 'all', inplace = True)
 
-        print('X: ', X.head())
-        print('info:', X.info())
         return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)

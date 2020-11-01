@@ -4,4 +4,4 @@
 # from .catboost_classifier import CatBoostClassifierContainer
 from .kneighbors_classifier import KNeighborsClassifierContainer
 from .lgbm_classifier import LGBMClassifierContainer
-from .xgb_classifier import XGBClassifierContainer
+# from .xgb_classifier import XGBClassifierContainer

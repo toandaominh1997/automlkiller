@@ -1,5 +1,24 @@
+import pickle
+
 from sklearn.pipeline import Pipeline
 from .logger import LOGGER
+
+
+
+def save_model(model, model_path):
+    LOGGER.info(f"Initializing save_model({model.__class__.__name__}, {model_path})")
+    with open(model_path, 'wb') as fp:
+        pickle.dump(model, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    LOGGER.info('Preprocess and Model Succesfully Saved')
+    LOGGER.info('"save_model() succesfully completed......................................"')
+
+def load_model(model_path):
+    LOGGER.info(f"Initializing load_model({model_path})")
+    with open(model_path, 'rb') as fp:
+        obj = pickle.load(fp)
+        LOGGER.info("Transformation Pipeline and Model Successfully Loaded")
+    return obj
+
 def supports_partial_fit(estimator, params: dict = None) -> bool:
     # special case for MLP
     from sklearn.neural_network import MLPClassifier

@@ -2,7 +2,7 @@ from enum import Enum, auto
 import numpy as np
 import pandas as pd
 import json
-
+from copy import deepcopy
 import sklearn
 from sklearn.datasets import make_classification
 from sklearn.model_selection import StratifiedKFold
@@ -22,38 +22,48 @@ from autotonne.utils.distributions import get_optuna_distributions
 from autotonne.utils import LOGGER, can_early_stop
 class Classification(object):
     def __init__(self,
-                 X,
-                 y,
-                 test_size: float = 0.2,
                  preprocess: bool = True,
                  **kwargs
                  ):
         super(Classification, self).__init__()
-        X, y = Preprocess(**kwargs).fit_transform(X, y)
-        self.X = pd.DataFrame(X).reset_index(drop=True)
-        self.y = pd.DataFrame(y).reset_index(drop=True)
-        del X, y
+        self.preprocess = preprocess
+        if self.preprocess == True:
+            self.preprocessor = Preprocess(**kwargs)
+        self.estimator = {}
 
-    def create_models(self,
+    def create_model(self,
+                      X,
+                      y,
                       estimator,
                       cv: int  = 2,
                       scoring = ['roc_auc_ovr'],
+                      sort = None,
                       fit_params = {},
                       n_jobs = -1,
                       verbose = False,
-                      **kwargs):
+                      estimator_kwargs = {}):
         """
         fit_kwargs: dict, default = {} (empty dict)
             Dictionary of arguments passed to the fit method of the model.
         **kwargs:
             Additional keyword arguments to pass to the estimator.
         """
-        X = self.X
-        y = self.y
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+
+        if sort is None:
+            sort = scoring[0]
         score_models = {}
         for name_model in ModelFactory.name_registry:
             if str(estimator) in name_model:
-                model = ModelFactory.create_executor(name_model, **kwargs)
+                if name_model in estimator_kwargs.keys():
+                    estimator_params = estimator_kwargs[name_model]
+                else:
+                    estimator_params = estimator_kwargs
+                model = ModelFactory.create_executor(name_model, **estimator_params)
                 estimator = model.estimator
                 scores = sklearn.model_selection.cross_validate(estimator = estimator,
                                                                 X = X,
@@ -64,9 +74,9 @@ class Classification(object):
                                                                 verbose = verbose,
                                                                 fit_params = fit_params,
                                                                 return_train_score = True,
-                                                                return_estimator = False)
-
-
+                                                                return_estimator = True)
+                self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
+                scores.pop('estimator')
                 name_model = ''.join(name_model.split('-')[1:])
                 for key, values in scores.items():
                     for i, value in enumerate(values):
@@ -79,15 +89,23 @@ class Classification(object):
         return score_models
 
 
-    def compare_models(self,
-                      cv: int  = 2,
-                      scoring = ['roc_auc_ovr'],
-                      fit_params = {},
-                      n_jobs = -1,
-                      verbose = False,
-                      **kwargs):
-        X = self.X
-        y = self.y
+    def compare_model(self,
+                        X,
+                        y,
+                        cv: int  = 2,
+                        scoring = ['roc_auc_ovr'],
+                        sort = None,
+                        fit_params = {},
+                        n_jobs = -1,
+                        verbose = False,
+                        **kwargs):
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
+        if sort is None:
+            sort = scoring[0]
         score_models = {}
         for name_model in ModelFactory.name_registry:
             if 'classification' in name_model:
@@ -102,7 +120,9 @@ class Classification(object):
                                                                 verbose = verbose,
                                                                 fit_params = fit_params,
                                                                 return_train_score = True,
-                                                                return_estimator = False)
+                                                                return_estimator = True)
+                self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
+                scores.pop('estimator')
                 name_model = ''.join(name_model.split('-')[1:])
                 for key, values in scores.items():
                     for i, value in enumerate(values):
@@ -116,7 +136,9 @@ class Classification(object):
 
 
 
-    def tune_models(self,
+    def tune_model(self,
+                    X,
+                    y,
                     estimator = None,
                     fold = None,
                     n_iter = 10,
@@ -128,13 +150,25 @@ class Classification(object):
                     verbose = True,
                     n_jobs = -1
                     ):
+        if self.preprocess == True:
+            self.preprocessor.fit(X, y)
+            X, y = self.preprocessor.transform(X, y)
+        X = pd.DataFrame(X).reset_index(drop=True)
+        y = pd.DataFrame(y).reset_index(drop=True)
         LOGGER.info('tune models')
         best_params_model = {}
         model_grid = None
-        print(ModelFactory.name_registry)
-        for name_model in ModelFactory.name_registry:
+
+        estimator_tune = {}
+        if estimator is None:
+            for name_model in ModelFactory.name_registry:
+                estimator_tune[name_model] = ModelFactory.create_executor(name_model)
+        else:
+            for name_model in estimator:
+                estimator_tune[name_model] = ModelFactory.create_executor(name_model)
+
+        for name_model, model in estimator_tune.items():
             LOGGER.info('tunning model_name: {}'.format(name_model))
-            model = ModelFactory.create_executor(name_model)
             estimator = model.estimator
 
             parameter_grid = model.tune_grid
@@ -212,11 +246,12 @@ class Classification(object):
 
 
 
-            model_grid.fit(self.X, self.y)
+            model_grid.fit(X, y)
             best_params = model_grid.best_params_
             LOGGER.info('best_params: {}'.format(best_params))
             best_params_model[name_model] = best_params
         return best_params_model
+
 
 
 if __name__=='__main__':
@@ -224,5 +259,5 @@ if __name__=='__main__':
     data = pd.DataFrame(X)
     data['target'] = y
     obj = Classification(data = data, target='target')
-    obj.create_models(estimator = 'LGBM')
+    obj.create_model(estimator = 'LGBM')
     # obj.tune_models()
