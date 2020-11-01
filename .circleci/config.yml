@@ -39,7 +39,7 @@ jobs:
             - run:
                   name: "run test"
                   command: |
-                      python test.py
+                      python test_data.py
             - store_test_results:
                 path: ~/root/autotonne/
             - store_artifacts:

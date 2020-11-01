@@ -1,5 +1,7 @@
 numpy
 pandas
+matplotlib
+seaborn
 scikit-learn
 pyod
 category-encoders
@@ -12,4 +14,5 @@ scikit-plot
 optuna
 ray
 tune-sklearn
+yellowbrick
 

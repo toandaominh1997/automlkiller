@@ -34,8 +34,8 @@ jobs:
           pip install --upgrade pip
           pip install --upgrade pytest
           pip install -r requirements.txt
+      - name: python data boston
+        run: python test_data.py
       - name: python main
-        run: python main.py
-      - name: python test
         run: python main.py
 

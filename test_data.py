@@ -17,7 +17,7 @@ if __name__ =='__main__':
     obj = Classification(X, y,
         groupsimilarfeature = False
     )
-    # obj.create_model(estimator=['lgbmclassifier', 'kneighborsclassifier'])
+    obj.create_model(estimator=['classification-lgbmclassifier', 'classification-kneighborsclassifier'])
     obj.compare_model(scoring=['f1_micro'])
     print(obj.report_classification())
     estimator_params = obj.tune_model()
@@ -27,3 +27,4 @@ if __name__ =='__main__':
     obj.voting_model(scoring=['f1_micro'])
     obj.stacking_model(scoring=['f1_micro'])
     obj.report_classification(sort_by = 'test_f1_micro_1fold').to_csv('./data/report.csv')
+    obj.plot_model()

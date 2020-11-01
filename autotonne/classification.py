@@ -1,3 +1,4 @@
+import os
 from enum import Enum, auto
 import numpy as np
 import pandas as pd
@@ -17,6 +18,10 @@ from autotonne.models.classification import *
 import optuna
 from ray.tune.sklearn import TuneGridSearchCV
 from ray.tune.sklearn import TuneSearchCV
+# visualization
+from yellowbrick.classifier import ClassificationReport, ConfusionMatrix, ROCAUC, PrecisionRecallCurve, ClassPredictionError, DiscriminationThreshold
+import matplotlib.pyplot as plt
+
 from autotonne.utils.distributions import get_optuna_distributions
 
 from autotonne.utils import LOGGER, can_early_stop
@@ -37,8 +42,8 @@ class Classification(object):
             X, y = self.preprocessor.transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
         y = pd.DataFrame(y).reset_index(drop=True)
-        self.X = X
-        self.y = y
+        self.X = X.values.reshape(len(X), -1)
+        self.y = y.values.ravel()
         self.estimator = {}
         self.metrics = {}
 
@@ -61,35 +66,49 @@ class Classification(object):
         y = self.y
         if sort is None:
             sort = scoring[0]
-
-        for name_model in ModelFactory.name_registry:
-            if str(estimator) in name_model:
+        score_models = {}
+        estimators = {}
+        if estimator is None:
+            if len(self.estimator.keys()) > 0:
+                for name_model, estimator in self.estimator.items():
+                    estimators[name_model] = estimator
+            else:
+                for name_model in ModelFactory.name_registry:
+                    if name_model in estimator_params.keys():
+                        estimators[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
+                    else:
+                        estimators[name_model] = ModelFactory.create_executor(name_model)
+        else:
+            for name_model in estimator:
                 if name_model in estimator_params.keys():
-                    estimator_param = estimator_params[name_model]
+                    estimators[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                 else:
-                    estimator_param = estimator_params
-                model = ModelFactory.create_executor(name_model, **estimator_param)
+                    estimators[name_model] = ModelFactory.create_executor(name_model)
+        for name_model, model in estimators.items():
+            try:
                 estimator = model.estimator
-                scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                                                X = X,
-                                                                y = y,
-                                                                scoring=scoring,
-                                                                cv = cv,
-                                                                n_jobs = n_jobs,
-                                                                verbose = verbose,
-                                                                fit_params = fit_params,
-                                                                return_train_score = True,
-                                                                return_estimator = True,
-                                                                error_score=-1)
-                self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
-                scores.pop('estimator')
-                name_model = ''.join(name_model.split('-')[1:])
-                for key, values in scores.items():
-                    for i, value in enumerate(values):
-                        if name_model not in self.metrics.keys():
-                            self.metrics[name_model] = {}
-                        self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+            except:
+                estimator = model
 
+            scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                            X = X,
+                                                            y = y,
+                                                            scoring=scoring,
+                                                            cv = cv,
+                                                            n_jobs = n_jobs,
+                                                            verbose = verbose,
+                                                            fit_params = fit_params,
+                                                            return_train_score = True,
+                                                            return_estimator = True,
+                                                            error_score=-1)
+            self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
+            scores.pop('estimator')
+            name_model = ''.join(name_model.split('-')[1:])
+            for key, values in scores.items():
+                for i, value in enumerate(values):
+                    if name_model not in self.metrics.keys():
+                        self.metrics[name_model] = {}
+                    self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
 
 
@@ -272,13 +291,13 @@ class Classification(object):
             else:
                 for name_model in ModelFactory.name_registry:
                     if name_model in estimator_params.keys():
-                        estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                        estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                     else:
                         estimator_ensemble[name_model] = ModelFactory.create_executor(name_model)
         else:
             for name_model in estimator:
                 if name_model in estimator_params.keys():
-                    estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    estimator_ensemble[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                 else:
                     estimator_ensemble[name_model] = ModelFactory.create_executor(name_model)
 
@@ -342,13 +361,13 @@ class Classification(object):
             else:
                 for name_model in ModelFactory.name_registry:
                     if name_model in estimator_params.keys():
-                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                     else:
                         estimator_voting[name_model] = ModelFactory.create_executor(name_model)
         else:
             for name_model in estimator:
                 if name_model in estimator_params.keys():
-                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                 else:
                     estimator_voting[name_model] = ModelFactory.create_executor(name_model)
         model_voting = []
@@ -424,13 +443,13 @@ class Classification(object):
             else:
                 for name_model in ModelFactory.name_registry:
                     if name_model in estimator_params.keys():
-                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                        estimator_voting[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                     else:
                         estimator_voting[name_model] = ModelFactory.create_executor(name_model)
         else:
             for name_model in estimator:
                 if name_model in estimator_params.keys():
-                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, estimator_params[name_model])
+                    estimator_voting[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
                 else:
                     estimator_voting[name_model] = ModelFactory.create_executor(name_model)
         model_voting = []
@@ -467,6 +486,65 @@ class Classification(object):
                     self.metrics[name_model] = {}
                 self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
+    def plot_model(self):
+        LOGGER.info('Initializing plot model')
+        size_plot = len(self.estimator.items())
+        # fig, axes = plt.subplots(size_plot*6, figsize=(20, 20*size_plot*6))
+        if os.path.isdir(os.path.join(os.getcwd(), 'viz')) == False:
+            os.makedirs(os.path.join(os.getcwd(), 'viz/'))
+        classes = pd.value_counts(self.y.values.flatten()).index
+        index = 0
+        for idx, (name_model, estimator) in enumerate(self.estimator.items()):
+            X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(self.X, self.y, test_size = 0.2, stratify=self.y, random_state = 24)
+            try:
+                viz = ClassificationReport(model = estimator)
+                index +=1
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                pass
+            try:
+                viz = ConfusionMatrix(model = estimator)
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                pass
+            try:
+                viz = ROCAUC(model = estimator)
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                pass
+            try:
+                viz = PrecisionRecallCurve(model = estimator, per_class=True)
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                pass
+            try:
+                viz = ClassPredictionError(model = estimator, classes = classes)
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                LOGGER.warn(f'{viz.__class__.__name__} ERROR')
+            try:
+                viz = DiscriminationThreshold(model = estimator)
+                viz.fit(X_train, y_train)
+                viz.score(X_test, y_test)
+                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
+                index = index + 1
+            except:
+                LOGGER.warn(f'{viz.__class__.__name__} ERROR')
     def report_classification(self, sort_by=None):
         scores = pd.DataFrame.from_dict(self.metrics, orient = 'index')
         if sort_by is not None:
