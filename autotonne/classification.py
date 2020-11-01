@@ -49,23 +49,27 @@ class Classification(object):
         X = self.X
         y = self.y
         skf = StratifiedKFold(n_splits=n_splits)
-        score_model = ClassificationMetricContainer()
+        scores = {}
         for name_model in ModelFactory.name_registry:
             if estimator in name_model:
-                model = ModelFactory.create_executor(name_model, kwargs)
+                model = ModelFactory.create_executor(name_model, **kwargs)
                 estimator = model.estimator
+                score_model = ClassificationMetricContainer()
+                if name_model not in scores.keys():
+                    scores[name_model] = score_model
                 for train_index, test_index  in skf.split(X, y):
                     X_train, X_test = X.loc[train_index], X.loc[test_index]
                     y_train, y_test = y.loc[train_index], y.loc[test_index]
-                    estimator.fit(X = X_train, y = y_train, **fit_kwargs)
+                    estimator.fit(X = X_train, y = y_train)
                     score_model.classification_report(y_test, estimator.predict(X_test))
                     try:
                         score_model.classification_report_proba(y_test, estimator.predict_proba(X_test)[:, 1])
                     except:
                         LOGGER.warn('{} has no attribute predict proba'.format(name_model))
-        score_model.score_mean()
-        print('score_model: ', score_model.score_mean())
-        return score_model
+                scores[name_model] = score_model.score_mean()
+        scores = pd.read_json(json.dumps(scores))
+        print('scores: ', scores)
+        return scores
 
 
     def compare_models(self,
