@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import json
 
+import sklearn
 from sklearn.datasets import make_classification
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
@@ -21,88 +22,97 @@ from autotonne.utils.distributions import get_optuna_distributions
 from autotonne.utils import LOGGER, can_early_stop
 class Classification(object):
     def __init__(self,
-                 data: pd.DataFrame,
-                 target: str,
+                 X,
+                 y,
                  test_size: float = 0.2,
                  preprocess: bool = True,
+                 **kwargs
                  ):
         super(Classification, self).__init__()
-        X = data.drop(columns=[target])
-        y = data[target]
-        X, y = Preprocess().fit_transform(X, y)
-        X = pd.DataFrame(X).reset_index(drop=True)
-        y = pd.DataFrame(y).reset_index(drop=True)
-        print('X: ', X )
-        self.X = X
-        self.y = y
+        X, y = Preprocess(**kwargs).fit_transform(X, y)
+        self.X = pd.DataFrame(X).reset_index(drop=True)
+        self.y = pd.DataFrame(y).reset_index(drop=True)
+        del X, y
 
     def create_models(self,
                       estimator,
-                      fold = None,
-                      round = 4,
-                      cross_validation = True,
-                      n_splits: int  = 2,
-                      fit_kwargs = None,
-                      group = None,
-                      verbose = True,
+                      cv: int  = 2,
+                      scoring = ['roc_auc_ovr'],
+                      fit_params = {},
+                      n_jobs = -1,
+                      verbose = False,
                       **kwargs):
+        """
+        fit_kwargs: dict, default = {} (empty dict)
+            Dictionary of arguments passed to the fit method of the model.
+        **kwargs:
+            Additional keyword arguments to pass to the estimator.
+        """
         X = self.X
         y = self.y
-        skf = StratifiedKFold(n_splits=n_splits)
-        scores = {}
+        score_models = {}
         for name_model in ModelFactory.name_registry:
-            if estimator in name_model:
+            if str(estimator) in name_model:
                 model = ModelFactory.create_executor(name_model, **kwargs)
                 estimator = model.estimator
-                score_model = ClassificationMetricContainer()
-                if name_model not in scores.keys():
-                    scores[name_model] = score_model
-                for train_index, test_index  in skf.split(X, y):
-                    X_train, X_test = X.loc[train_index], X.loc[test_index]
-                    y_train, y_test = y.loc[train_index], y.loc[test_index]
-                    estimator.fit(X = X_train, y = y_train)
-                    score_model.classification_report(y_test, estimator.predict(X_test))
-                    try:
-                        score_model.classification_report_proba(y_test, estimator.predict_proba(X_test)[:, 1])
-                    except:
-                        LOGGER.warn('{} has no attribute predict proba'.format(name_model))
-                scores[name_model] = score_model.score_mean()
-        scores = pd.read_json(json.dumps(scores))
-        print('scores: ', scores)
-        return scores
+                scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                                X = X,
+                                                                y = y,
+                                                                scoring=scoring,
+                                                                cv = cv,
+                                                                n_jobs = n_jobs,
+                                                                verbose = verbose,
+                                                                fit_params = fit_params,
+                                                                return_train_score = True,
+                                                                return_estimator = False)
+
+
+                name_model = ''.join(name_model.split('-')[1:])
+                for key, values in scores.items():
+                    for i, value in enumerate(values):
+                        if name_model not in score_models.keys():
+                            score_models[name_model] = {}
+                        score_models[name_model][key + "_{}fold".format(i + 1)] = value
+
+        score_models = pd.read_json(json.dumps(score_models))
+        print('score_models: ', score_models)
+        return score_models
 
 
     def compare_models(self,
-                       cross_validation: bool = True,
-                       n_splits: int = 2,
-                       sort: str = 'Accuracy',
-                       verbose: bool = True):
+                      cv: int  = 2,
+                      scoring = ['roc_auc_ovr'],
+                      fit_params = {},
+                      n_jobs = -1,
+                      verbose = False,
+                      **kwargs):
         X = self.X
         y = self.y
-        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
-        models = []
-        scores = {}
+        score_models = {}
         for name_model in ModelFactory.name_registry:
             if 'classification' in name_model:
-                model = ModelFactory.create_executor(name_model)
+                model = ModelFactory.create_executor(name_model, **kwargs)
                 estimator = model.estimator
-                score_model = ClassificationMetricContainer()
-                if name_model not in scores.keys():
-                    scores[name_model] = score_model
-                for train_index, test_index in skf.split(X, y):
-                    X_train, X_test = X.loc[train_index], X.loc[test_index]
-                    y_train, y_test = y.loc[train_index], y.loc[test_index]
-                    estimator.fit(X = X_train, y = y_train)
-                    score_model.classification_report(y_test, estimator.predict(X_test))
-                    try:
-                        score_model.classification_report_proba(y_test, estimator.predict_proba(X_test)[:, 1])
-                    except:
-                        LOGGER.warn('{} has no attribute predict proba'.format(name_model))
-                scores[name_model] = score_model.score_mean()
-        scores = pd.read_json(json.dumps(scores))
-        print('scores: ', scores)
-        return scores
+                scores = sklearn.model_selection.cross_validate(estimator = estimator,
+                                                                X = X,
+                                                                y = y,
+                                                                scoring=scoring,
+                                                                cv = cv,
+                                                                n_jobs = n_jobs,
+                                                                verbose = verbose,
+                                                                fit_params = fit_params,
+                                                                return_train_score = True,
+                                                                return_estimator = False)
+                name_model = ''.join(name_model.split('-')[1:])
+                for key, values in scores.items():
+                    for i, value in enumerate(values):
+                        if name_model not in score_models.keys():
+                            score_models[name_model] = {}
+                        score_models[name_model][key + "_{}fold".format(i + 1)] = value
 
+        score_models = pd.read_json(json.dumps(score_models))
+        print('score_models: ', score_models)
+        return score_models
 
 
 

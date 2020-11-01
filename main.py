@@ -19,9 +19,9 @@ def main():
     df['CALENDAR_DIM_ID'] = pd.date_range(start = '1/1/2020', periods = len(df))
     df = df.loc[:, columns].head(1000)
     print(df.head())
-    obj = Classification(data = df, target='Age')
+    obj = Classification(X = df.drop(columns=['Age']), y = df['Age'])
     obj.create_models(estimator='lgbm')
-    # obj.compare_models()
-    # obj.tune_models()
+    obj.compare_models()
+    obj.tune_models()
 if __name__ =='__main__':
     main()
