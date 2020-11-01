@@ -22,14 +22,15 @@ def main():
     df = df.loc[:, columns].head(1000)
     X = df.drop(columns = ['Age'])
     y = df['Age']
+    print('value_counts: ', y.value_counts())
     obj = Classification(
         groupsimilarfeature = True
     )
     obj.create_model(X, y, estimator='lgbm')
     print('estimator', obj.estimator)
     obj.compare_model(X, y)
-    best_params = obj.tune_model(X, y, estimator=None)
-    print('BEST_PARAMS: ', best_params)
+    # best_params = obj.tune_model(X, y, estimator=None)
+    # print('BEST_PARAMS: ', best_params)
     best_params = obj.tune_model(X, y, estimator=['classification-lgbmclassifier'])
     print('BEST_PARAMS: ', best_params)
 

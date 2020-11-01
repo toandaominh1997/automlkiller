@@ -20,8 +20,8 @@ if __name__ =='__main__':
     obj.create_model(X, y, estimator='lgbm')
     print('estimator', obj.estimator)
     obj.compare_model(X, y)
-    best_params = obj.tune_model(X, y, estimator=None)
-    print('BEST_PARAMS: ', best_params)
+    # best_params = obj.tune_model(X, y, estimator=None)
+    # print('BEST_PARAMS: ', best_params)
     best_params = obj.tune_model(X, y, estimator=['classification-lgbmclassifier'])
     print('BEST_PARAMS: ', best_params)
 
