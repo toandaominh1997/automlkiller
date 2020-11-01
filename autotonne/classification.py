@@ -27,6 +27,7 @@ class Classification(object):
                  ):
         super(Classification, self).__init__()
         self.preprocess = preprocess
+        print(kwargs)
         if self.preprocess == True:
             self.preprocessor = Preprocess(**kwargs)
         self.estimator = {}
@@ -41,7 +42,7 @@ class Classification(object):
                       fit_params = {},
                       n_jobs = -1,
                       verbose = False,
-                      estimator_kwargs = {}):
+                      estimator_params = {}):
         """
         fit_kwargs: dict, default = {} (empty dict)
             Dictionary of arguments passed to the fit method of the model.
@@ -59,11 +60,11 @@ class Classification(object):
         score_models = {}
         for name_model in ModelFactory.name_registry:
             if str(estimator) in name_model:
-                if name_model in estimator_kwargs.keys():
-                    estimator_params = estimator_kwargs[name_model]
+                if name_model in estimator_params.keys():
+                    estimator_param = estimator_params[name_model]
                 else:
-                    estimator_params = estimator_kwargs
-                model = ModelFactory.create_executor(name_model, **estimator_params)
+                    estimator_param = estimator_params
+                model = ModelFactory.create_executor(name_model, **estimator_param)
                 estimator = model.estimator
                 scores = sklearn.model_selection.cross_validate(estimator = estimator,
                                                                 X = X,
@@ -98,7 +99,7 @@ class Classification(object):
                         fit_params = {},
                         n_jobs = -1,
                         verbose = False,
-                        **kwargs):
+                        estimator_params = {}):
         if self.preprocess == True:
             self.preprocessor.fit(X, y)
             X, y = self.preprocessor.transform(X, y)
@@ -109,7 +110,11 @@ class Classification(object):
         score_models = {}
         for name_model in ModelFactory.name_registry:
             if 'classification' in name_model:
-                model = ModelFactory.create_executor(name_model, **kwargs)
+                if name_model in estimator_params.keys():
+                    estimator_param = estimator_params[name_model]
+                else:
+                    estimator_param = estimator_params
+                model = ModelFactory.create_executor(name_model, **estimator_param)
                 estimator = model.estimator
                 scores = sklearn.model_selection.cross_validate(estimator = estimator,
                                                                 X = X,

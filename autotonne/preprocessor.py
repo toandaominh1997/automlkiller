@@ -149,10 +149,22 @@ class Preprocess(object):
             self.preprocess_objs.append(preprocess_object)
 
     def fit(self, X, y = None, **fit_params):
+        X = X.copy()
+        y = y.copy()
+        X.columns = [str(col) for col in X.columns.tolist()]
+        y.columns = [str(col) for col in y.columns.tolist()]
+        X = X.loc[:, ~X.columns.duplicated()]
+        X.dropna(axis=1, how='all', inplace=True)
         for obj in self.preprocess_objs:
             obj.fit(X, y)
 
     def transform(self, X, y = None, **fit_params):
+        X = X.copy()
+        y = y.copy()
+        X.columns = [str(col) for col in X.columns.tolist()]
+        y.columns = [str(col) for col in y.columns.tolist()]
+        X = X.loc[:, ~X.columns.duplicated()]
+        X.dropna(axis=1, how='all', inplace=True)
         data = X, y
         for obj in self.preprocess_objs:
             data = obj.transform(*data)

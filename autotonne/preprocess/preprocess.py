@@ -96,7 +96,7 @@ class DataTypes(BaseEstimator, TransformerMixin):
             return self
 
     def transform(self, X, y = None):
-        LOGGER.info('transform datatype')
+        LOGGER.info('TRANSFORM DATATYPE')
         X = X.copy()
         y = y.copy()
         X.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -104,11 +104,11 @@ class DataTypes(BaseEstimator, TransformerMixin):
         X = X.astype(self.learned_dtypes)
 
         # remove columns with duplicate name
-        X = X.loc[:, ~X.columns.duplicated()]
+        # X = X.loc[:, ~X.columns.duplicated()]
 
         # remove nas
         X.dropna(axis = 0, how='all', inplace = True)
-        X.dropna(axis = 1, how = 'all', inplace = True)
+        # X.dropna(axis = 1, how = 'all', inplace = True)
 
         return X, y
     def fit_transform(self, X, y = None):
@@ -130,16 +130,16 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT SIMPLE IMPUTER')
         X = X.copy()
-        self.numeric_columns = X.select_dtypes(include=[np.number]).columns
-        self.categorical_columns = X.select_dtypes(include=['object', 'category']).columns
-        self.time_columns = X.select_dtypes(include=['datetime64[ns]']).columns
-        if not self.numeric_columns.empty:
-            self.numeric_imputer.fit(X[self.numeric_columns])
+        self.numeric_columns = [str(col) for col in X.select_dtypes(include=[np.number]).columns.tolist()]
+        self.categorical_columns = [str(col) for col in X.select_dtypes(include=['object', 'category']).columns.tolist()]
+        self.time_columns = [str(col) for col in X.select_dtypes(include=['datetime64[ns]']).columns.tolist()]
+        if len(self.numeric_columns) > 0:
+            self.numeric_imputer.fit(X.loc[:, self.numeric_columns])
 
-        if not self.categorical_columns.empty:
+        if len(self.categorical_columns) > 0:
             self.categorical_imputer.fit(X[self.categorical_columns])
 
-        if not self.time_columns.empty:
+        if len(self.time_columns) > 0:
             self.most_frequent_time = []
             for col in self.time_columns:
                 self.most_frequent_time.append(X[col].mode()[0])
@@ -148,11 +148,11 @@ class SimpleImputer(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM SIMPLE IMPUTER')
         X = X.copy()
-        if not self.numeric_columns.empty:
-            X[self.numeric_columns] = self.numeric_imputer.transform(X[self.numeric_columns])
-        if not self.categorical_columns.empty:
-            X[self.categorical_columns] = self.categorical_imputer.transform(X[self.categorical_columns])
-        if not self.time_columns.empty:
+        if len(self.numeric_columns) > 0:
+            X.loc[:, self.numeric_columns] = self.numeric_imputer.transform(X.loc[:, self.numeric_columns])
+        if len(self.categorical_columns) > 0:
+            X.loc[:, self.categorical_columns] = self.categorical_imputer.transform(X.loc[:, self.categorical_columns])
+        if len(self.time_columns) > 0:
             for idx, col in enumerate(self.time_columns):
                 X[col].fillna(self.most_frequent_time[idx])
         return X, y
