@@ -33,7 +33,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --upgrade pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
       - name: python main
         run: python main.py
       - name: python test
