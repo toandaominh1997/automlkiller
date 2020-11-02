@@ -18,11 +18,9 @@ jobs:
       - name: Checkout last passing commit 
         uses: actions/checkout@v2
       - name: Update __VERSION__
-        run: |
-          python configs/update_version.py --version ${{ github.ref }}
+        run: python configs/update_version.py --version ${{ github.ref }}
       - name: Build stable distribution
         run: |
-          echo ${{ github.ref }}
           rm -rf dist/*
           python setup.py sdist bdist_wheel
       - name: Publish distribution to PyPI
