@@ -29,13 +29,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{matrix.python-version}}
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install --upgrade pytest
-          pip install -r requirements.txt
-      - name: python data boston
-        run: python test_data.py
-      - name: python main
-        run: python main.py
+      # - name: Install dependencies
+      #   run: |
+      #     pip install --upgrade pip
+      #     pip install --upgrade pytest
+      #     pip install -r requirements.txt
+      # - name: python data boston
+      #   run: python test_data.py
+      # - name: python main
+      #   run: python main.py
 
