@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 setup(
     name="autotonne",
-    version="0.0.1",
+    version="0.0.2",
     description="Auto machine learning, deep learning library in Python.",
     long_description=readme(),
     long_description_content_type="text/markdown",
