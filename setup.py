@@ -1,4 +1,8 @@
+import os
 from setuptools import setup, find_packages
+
+with open(os.path.join(os.getcwd(), 'configs/__VERSION__')) as fp:
+    __VERSION__ = str(fp.read())
 
 def readme():
     with open('README.md') as f:
@@ -9,7 +13,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 setup(
     name="autotonne",
-    version="0.0.2",
+    version=__VERSION__,
     description="Auto machine learning, deep learning library in Python.",
     long_description=readme(),
     long_description_content_type="text/markdown",

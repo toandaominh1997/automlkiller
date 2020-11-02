@@ -17,6 +17,9 @@ jobs:
           pip install --upgrade setuptools wheel requests
       - name: Checkout last passing commit 
         uses: actions/checkout@v2
+      - name: Update __VERSION__
+        run: |
+          python configs/update_version.py --version ${{ github.ref }}
       - name: Build stable distribution
         run: |
           echo ${{ github.ref }}
