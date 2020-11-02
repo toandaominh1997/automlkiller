@@ -15,4 +15,5 @@ optuna
 ray
 tune-sklearn
 yellowbrick
-
+google-cloud-bigquery
+google-cloud-storage

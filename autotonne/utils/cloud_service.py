@@ -4,7 +4,7 @@ import pickle
 import os
 import pandas as pd
 
-from zueskit.logger.logger import LOGGER
+from autotonne.utils import LOGGER
 
 
 class CloudService(object):
