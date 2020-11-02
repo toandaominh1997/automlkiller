@@ -23,7 +23,6 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
-    packages=["autotonne"],
     include_package_data=True,
     install_requires=required
 )
