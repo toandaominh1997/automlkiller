@@ -17,6 +17,7 @@ jobs:
             - run:
                   name: "install package"
                   command: |
+                      pip install --upgrade pip
                       pip install -r requirements.txt
             - run:
                   name: "python main"
@@ -35,6 +36,7 @@ jobs:
             - run:
                   name: "install package"
                   command: |
+                      pip install --upgrade pip
                       pip install -r requirements.txt
             - run:
                   name: "run test"
