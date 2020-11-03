@@ -44,6 +44,8 @@ class Preprocess(object):
                 outlier_method = ['pca', 'iforest', 'knn'],
                 outlier_contamination = 0.2,
 
+                removeperfectmulticollinearity = True,
+
                 makenonlinearfeature = True,
                 makenonlinearfeature_polynomial_columns = [],
                 makenonlinearfeature_degree = 2,
@@ -116,6 +118,9 @@ class Preprocess(object):
                 'contamination': outlier_contamination
             },
 
+            'removeperfectmulticollinearity': {
+                'flag': removeperfectmulticollinearity
+            },
             'makenonlinearfeature': {
                 'flag': makenonlinearfeature,
                 "polynomial_columns": makenonlinearfeature_polynomial_columns,
@@ -183,8 +188,13 @@ class Preprocess(object):
             return data[0]
         return data
     def fit_transform(self, X, y = None):
-        self.fit(X, y)
-        return self.transform(X, y)
+        for obj in self.preprocess_objs:
+            obj.fit(X, y)
+            X, y = obj.transform(X, y)
+
+        if y is None:
+            return X
+        return X, y
 
 if __name__=='__main__':
     X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)

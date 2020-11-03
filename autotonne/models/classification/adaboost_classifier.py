@@ -15,8 +15,8 @@ class AdaBoostClassifierContainer():
             "n_estimators": IntUniformDistribution(10, 300),
             "learning_rate": UniformDistribution(0.000001, 0.5, log=True),
         }
-        self.tune_grid = tune_grid
 
+        self.tune_grid = tune_grid
         self.tune_distributions = tune_distributions
         self.estimator = AdaBoostClassifier(**kwargs)
 

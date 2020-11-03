@@ -35,8 +35,17 @@ class DataTypes(BaseEstimator, TransformerMixin):
         X = X.copy()
         if y is not None:
             y = y.copy()
-        X.replace([np.inf, -np.inf], np.NaN, inplace=True)
+
         X.columns = [str(col) for col in X.columns]
+        X.replace([np.inf, -np.inf], np.NaN, inplace=True)
+        # remove columns with duplicate name
+        X = X.loc[:, ~X.columns.duplicated()]
+        # remove NAs
+        X.dropna(axis = 0, how = 'all', inplace = True)
+        X.dropna(axis = 1, how = 'all', inplace = True)
+        print('X: ', (X.isna().sum()/len(X)).sort_values())
+
+
         for col in X.select_dtypes(include=['object']).columns:
             try:
                 X[col] = X[col].astype("int64")
@@ -94,6 +103,8 @@ class DataTypes(BaseEstimator, TransformerMixin):
             self.learned_dtypes = X.dtypes
 
             X = X.replace([np.inf, -np.inf], np.NaN).astype(self.learned_dtypes)
+
+            self.final_columns = X.columns.tolist()
             return self
 
     def transform(self, X, y = None):
@@ -101,16 +112,12 @@ class DataTypes(BaseEstimator, TransformerMixin):
         X = X.copy()
         if y is not None:
             y = y.copy()
-        X.replace([np.inf, -np.inf], np.nan, inplace=True)
+
         X.columns = [str(col) for col in X.columns]
+        X = X.loc[:, self.final_columns]
+        X.replace([np.inf, -np.inf], np.nan, inplace=True)
         X = X.astype(self.learned_dtypes)
 
-        # remove columns with duplicate name
-        # X = X.loc[:, ~X.columns.duplicated()]
-
-        # remove nas
-        X.dropna(axis = 0, how='all', inplace = True)
-        # X.dropna(axis = 1, how = 'all', inplace = True)
 
         return X, y
     def fit_transform(self, X, y = None):
@@ -421,6 +428,7 @@ class Outlier(BaseEstimator, TransformerMixin):
         self.contamination = contamination
         self.random_state = random_state
         self.methods = methods
+
     def fit(self, X, y = None):
         LOGGER.info('FIT OUTLIER')
         X = X.copy()
@@ -437,6 +445,8 @@ class Outlier(BaseEstimator, TransformerMixin):
         if 'pca' in self.methods:
             pca = pyod.models.pca.PCA(contamination=self.contamination)
             self.outlier.append(pca)
+
+        return self
 
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM OUTLIER')
@@ -492,6 +502,8 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
         if len(self.polynomial_columns) > 0:
             self.poly.fit(X[self.polynomial_columns])
             poly_feature = self.poly.get_feature_names(input_features=self.polynomial_columns)
+
+            poly_feature = [col.replace('^', 'power') for col in poly_feature]
             data = self.poly.transform(X[self.polynomial_columns])
 
             for idx, col in enumerate(poly_feature):
@@ -508,10 +520,58 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
                     X[col + "_tan"] = np.tan(X[col])
 
 
-
+        if y is None:
+            return X
         return X, y
+    def fit_transform(self, X, y = None):
+        self.fit(X, y)
+        return self.transform(X, y)
 
+@PreprocessFactory.register('preprocess-removeperfectmulticollinearity')
+class RemovePerfectMulticollinearity(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        pass
+    def fit(self, X, y = None):
+        LOGGER.info('FIT Remove Perfect Multicollinearity')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
+        corr = pd.DataFrame(np.corrcoef(X.T))
+        corr.columns = X.columns
+        corr.index = X.columns
+        corr_matrix = abs(corr)
 
+        corr_matrix["column"] = corr_matrix.index
+        corr_matrix.reset_index(drop = True, inplace = True)
+        cols = corr_matrix.column
+
+        melt = corr_matrix.melt(id_vars = ['column'], value_vars = cols).sort_values(by = "value", ascending = False)
+        melt['value'] = round(melt['value'], 2)
+        c1 = melt['value'] == 1.00
+        c2 = melt['column'] != melt['variable']
+        melt = melt[((c1 ==True) & (c2 == True))]
+
+        melt['all_columns'] = melt['column'] + melt['variable']
+        melt['all_columns'] = [sorted(i) for i in melt['all_columns']]
+        melt = melt.sort_values(by = 'all_columns')
+        melt = melt.iloc[::2, :]
+        self.columns_to_drop = melt['variable']
+        if len(self.columns_to_drop) > 0:
+            LOGGER.info('[Remove100] columns to drop: {}'.format(self.columns_to_drop))
+        return self
+    def transform(self, X, y):
+        LOGGER.info('TRANSFORM Remove Perfect Multicollinearity')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
+        X = X.drop(columns = self.columns_to_drop)
+
+        if y is None:
+            return X
+        return X, y
+    def fit_transform(self, X, y = None):
+        self.fit(X, y)
+        return self.transform(X, y)
 
 
 @PreprocessFactory.register('preprocess-reducecategorywithcount')
