@@ -9,6 +9,8 @@ from autotonne.utils import LOGGER
 
 class Preprocess(object):
     def __init__(self,
+                 cleancolumnname = True,
+
                 datatype = True,
                 datatype_categorical_columns = [],
                 datatype_numeric_columns = [],
@@ -67,6 +69,9 @@ class Preprocess(object):
                  ):
         super(Preprocess, self).__init__()
         self.params = {
+            'cleancolumnname': {
+                'flag': cleancolumnname
+            },
             'datatype': {
                 'flag': datatype,
                 'numeric_columns': datatype_numeric_columns,

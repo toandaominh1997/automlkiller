@@ -14,6 +14,22 @@ import category_encoders as ce
 from autotonne.preprocess.preprocee_factory import PreprocessFactory
 from autotonne.utils.logger import LOGGER
 
+
+@PreprocessFactory.register('preprocess-cleancolumnname')
+class CleanColumnName(BaseEstimator, TransformerMixin):
+    def fit(self, X, y = None):
+        LOGGER.info('FIT CleanColumnName')
+        return self
+    def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM CleanColumnName')
+        X = X.copy()
+        if y is not None:
+            y = y.copy()
+        X.columns = X.columns.str.replace(r"[\,\}\{\]\[\:\"\']", "")
+
+        return X, y
+
+
 @PreprocessFactory.register('preprocess-datatype')
 class DataTypes(BaseEstimator, TransformerMixin):
     def __init__(self,
@@ -123,7 +139,6 @@ class DataTypes(BaseEstimator, TransformerMixin):
     def fit_transform(self, X, y = None):
         self.fit(X, y)
         return self.transform(X, y)
-
 
 
 
