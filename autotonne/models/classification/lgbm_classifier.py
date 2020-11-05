@@ -5,8 +5,6 @@ from autotonne.utils import np_list_arange, IntUniformDistribution, UniformDistr
 @ModelFactory.register('classification-lgbmclassifier')
 class LGBMClassifierContainer(LGBMClassifier):
     def __init__(self, **kwargs):
-        random_state = 24
-        super(LGBMClassifierContainer, self).__init__(random_state=random_state, **kwargs)
         tune_grid = {
             "num_leaves": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200],
             "learning_rate": np_list_arange(0.001, 0.5, 0.001, inclusive=True),

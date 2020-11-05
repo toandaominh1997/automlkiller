@@ -493,12 +493,11 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
         if self.polynomial_columns is None:
             self.polynomial_columns = []
         return self
-    def transform(self, X, y):
+    def transform(self, X, y = None):
         LOGGER.info('TRANSFORM MakeNonLinearFeature')
         X = X.copy()
         if y is not None:
             y = y.copy()
-
         if len(self.polynomial_columns) > 0:
             self.poly.fit(X[self.polynomial_columns])
             poly_feature = self.poly.get_feature_names(input_features=self.polynomial_columns)
@@ -565,7 +564,6 @@ class RemovePerfectMulticollinearity(BaseEstimator, TransformerMixin):
         if y is not None:
             y = y.copy()
         X = X.drop(columns = self.columns_to_drop)
-
         if y is None:
             return X
         return X, y

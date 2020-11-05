@@ -44,7 +44,7 @@ class Preprocess(object):
                 outlier_method = ['pca', 'iforest', 'knn'],
                 outlier_contamination = 0.2,
 
-                removeperfectmulticollinearity = True,
+                removeperfectmulticollinearity = False,
 
                 makenonlinearfeature = True,
                 makenonlinearfeature_polynomial_columns = [],
@@ -184,7 +184,7 @@ class Preprocess(object):
         data = X, y
         for obj in self.preprocess_objs:
             data = obj.transform(*data)
-        if data[1] is None:
+        if isinstance(data, pd.DataFrame) ==False:
             return data[0]
         return data
     def fit_transform(self, X, y = None):

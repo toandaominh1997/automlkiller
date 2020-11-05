@@ -1,5 +1,6 @@
 import os
 from enum import Enum, auto
+import scipy
 import numpy as np
 import pandas as pd
 import json
@@ -497,6 +498,62 @@ class Classification(object):
                     self.metrics[name_model] = {}
                 self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
         return self
+    def predict_proba_model(self,
+                            X,
+                            estimator = None,
+                            probability_threshold = None,
+                            round = 4,
+                            verbose = False
+                            ):
+        X = X.copy()
+        X = self.preprocessor.transform(X)
+        estimator_model = {}
+        if estimator is None:
+            for name_model, estimator in self.estimator.items():
+                estimator_model[name_model] = estimator
+        else:
+            for name_model in estimator:
+                if name_model in self.estimators.keys():
+                    estimator_model[name_model] = self.estimators[name_model]
+        preds = []
+        for name_model, estimator in estimator_model.items():
+            try:
+                y_pred = estimator.predict_proba(X)
+                preds.append(y_pred)
+            except:
+                LOGGER.warn(f'{estimator.__class__.__name__} not function predict_proba')
+        y_pred_proba = np.mean(np.vstack(preds), axis = 1)
+        return y_pred_proba
+
+
+    def predict_model(self,
+                    X,
+                    estimator = None,
+                      probability_threshold = None,
+                      rountd = 4,
+                      verbose = False
+                      ):
+        X = X.copy()
+        X = self.preprocessor.transform(X, None)
+        estimator_model = {}
+        if estimator is None:
+            for name_model, estimator in self.estimator.items():
+                estimator_model[name_model] = estimator
+        else:
+            for name_model in estimator:
+                if name_model in self.estimators.keys():
+                    estimator_model[name_model] = self.estimator[name_model]
+        preds = []
+        for name_model, estimator in estimator_model.items():
+            try:
+                y_pred = estimator.predict(X)
+                preds.append(y_pred)
+            except:
+                LOGGER.warn(f'{estimator.__class__.__name__} not function predict')
+        y_pred = scipy.stats.mode(np.vstack(preds), axis = 0)[0][0].tolist()
+        return y_pred
+
+
     def plot_model(self):
         LOGGER.info('Initializing plot model')
         size_plot = len(self.estimator.items())
@@ -557,11 +614,13 @@ class Classification(object):
                 index = index + 1
             except:
                 LOGGER.warn(f'{viz.__class__.__name__} ERROR')
+
     def report_classification(self, sort_by=None):
         scores = pd.DataFrame.from_dict(self.metrics, orient = 'index')
         if sort_by is not None:
             scores = scores.sort_values(by = sort_by, ascending=False)
         return scores
+
 
 
 
