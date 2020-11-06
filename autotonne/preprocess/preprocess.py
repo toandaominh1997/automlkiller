@@ -59,7 +59,6 @@ class DataTypes(BaseEstimator, TransformerMixin):
         # remove NAs
         X.dropna(axis = 0, how = 'all', inplace = True)
         X.dropna(axis = 1, how = 'all', inplace = True)
-        print('X: ', (X.isna().sum()/len(X)).sort_values())
 
 
         for col in X.select_dtypes(include=['object']).columns:
@@ -534,8 +533,6 @@ class MakeNonLinearFeature(BaseEstimator, TransformerMixin):
                     X[col + "_tan"] = np.tan(X[col])
 
 
-        if y is None:
-            return X
         return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
@@ -573,14 +570,12 @@ class RemovePerfectMulticollinearity(BaseEstimator, TransformerMixin):
         if len(self.columns_to_drop) > 0:
             LOGGER.info('[Remove100] columns to drop: {}'.format(self.columns_to_drop))
         return self
-    def transform(self, X, y):
+    def transform(self, X, y = None):
         LOGGER.info('TRANSFORM Remove Perfect Multicollinearity')
         X = X.copy()
         if y is not None:
             y = y.copy()
         X = X.drop(columns = self.columns_to_drop)
-        if y is None:
-            return X
         return X, y
     def fit_transform(self, X, y = None):
         self.fit(X, y)
@@ -626,12 +621,14 @@ class RecursiveFeatureElimination(BaseEstimator, TransformerMixin):
         else:
             self.selector = sklearn.feature_selection.RFECV(estimator=estimator, step = step, min_features_to_select=min_features_to_select, cv = cv, n_jobs=-1)
     def fit(self, X, y = None):
+        LOGGER.info('FIT RFE')
         X = X.copy()
         if y is not None:
             y = y.copy()
         self.selector.fit(X, y)
         return self
     def transform(self, X, y = None):
+        LOGGER.info('TRANSFORM RFE')
         X = X.copy()
         if y is not None:
             y = y.copy()
@@ -679,42 +676,4 @@ class ReduceDimension(BaseEstimator, TransformerMixin):
         X = X.copy()
         self.fit(X, y)
         return self.transform(X, y)
-
-def test(dataset, y):
-    print(dataset.info())
-    print('Start SimpleImputer ...')
-    dataset = SimpleImputer(numeric_strategy='mean', categorical_strategy='most_frequent').fit_transform(dataset)
-    print('Done SimpleImputer')
-    print('Start Binning ...')
-    dataset = Binning(features_to_discretize=['Jumps']).fit_transform(dataset)
-    print('Done Binning')
-    print('dataset: ', dataset)
-
-    print('Start scaling ...')
-    dataset = Scaling(numeric_columns=[], method = 'zscore').fit_transform(dataset)
-    print('Done Binning')
-
-    print('Start reducecategorywithcount ...')
-    dataset = ReduceCategoricalWithCount(categorical_columns=['Jumps']).fit_transform(dataset)
-    print('Done reducecategorywithcount')
-    print(dataset)
-    print('Start Outlier ...')
-    dataset, y = Outlier().fit_transform(dataset, y)
-    print('Done Outlier')
-
-    kaka = RecursiveFeatureElimination(estimator=sklearn.ensemble.RandomForestClassifier(), min_features_to_select=3, cv=3).fit(dataset, y)
-    print('selector: ',  kaka.get_support())
-    print('Start RecursiveFeatureElimination ...')
-    dataset = RecursiveFeatureElimination(estimator=sklearn.ensemble.RandomForestClassifier()).fit_transform(dataset, y)
-    print('Done RecursiveFeatureElimination')
-    print(dataset)
-    print('Start ReduceDimensionForSupervised ...')
-    dataset = ReduceDimensionForSupervised().fit_transform(dataset)
-    print('Done ReduceDimensionForSupervised')
-    print('dataset: ', dataset)
-if __name__=='__main__':
-    pass
-
-
-
 

@@ -201,10 +201,6 @@ class Preprocess(object):
             return X
         return X, y
 
-if __name__=='__main__':
-    X, y = sklearn.datasets.load_linnerud(return_X_y=True, as_frame=True)
-    data = Preprocess().fit_transform(X)
-    print(data)
 
 
 

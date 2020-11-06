@@ -41,7 +41,6 @@ class Classification(object):
             X, y = self.preprocessor.fit_transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
         y = pd.DataFrame(y).reset_index(drop=True)
-        print('X: ', X.columns)
         self.X = X
         self.y = y
         self.estimator = {}
@@ -519,11 +518,11 @@ class Classification(object):
         preds = []
         for name_model, estimator in estimator_model.items():
             try:
-                y_pred = estimator.predict_proba(X)
+                y_pred = estimator.predict_proba(X)[:, 1]
                 preds.append(y_pred)
             except:
                 LOGGER.warn(f'{estimator.__class__.__name__} not function predict_proba')
-        y_pred_proba = np.mean(np.vstack(preds), axis = 1)
+        y_pred_proba = np.mean(np.vstack(preds), axis = 0)
         return y_pred_proba
 
 
@@ -535,7 +534,7 @@ class Classification(object):
                       verbose = False
                       ):
         X = X.copy()
-        X = self.preprocessor.transform(X, None)
+        X = self.preprocessor.transform(X)
         estimator_model = {}
         if estimator is None:
             for name_model, estimator in self.estimator.items():
