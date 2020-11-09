@@ -17,3 +17,6 @@ tune-sklearn
 yellowbrick
 google-cloud-bigquery
 google-cloud-storage
+
+annoy
+lightfm

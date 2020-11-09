@@ -127,5 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+data/
 catboost_info/
 viz/
+visualizer/
+*.log

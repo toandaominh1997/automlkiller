@@ -19,21 +19,27 @@ from autotonne.models.classification import *
 import optuna
 from ray.tune.sklearn import TuneGridSearchCV
 from ray.tune.sklearn import TuneSearchCV
+
 # visualization
+from yellowbrick.model_selection import *
+from yellowbrick.features import *
 from yellowbrick.classifier import ClassificationReport, ConfusionMatrix, ROCAUC, PrecisionRecallCurve, ClassPredictionError, DiscriminationThreshold
+from yellowbrick.target import BalancedBinningReference, ClassBalance, FeatureCorrelation
 import matplotlib.pyplot as plt
 
 from autotonne.utils.distributions import get_optuna_distributions
 
 from autotonne.utils import LOGGER, can_early_stop
-class Classification(object):
+class AUTOML(object):
+    X = None
+    y = None
     def __init__(self,
                  X,
                  y,
                  preprocess: bool = True,
                  **kwargs
                  ):
-        super(Classification, self).__init__()
+        super(AUTOML, self).__init__()
         self.preprocess = preprocess
         if self.preprocess == True:
             self.preprocessor = Preprocess(**kwargs)
@@ -135,9 +141,7 @@ class Classification(object):
                     n_jobs = -1,
                     verbose = True,
                     ):
-        X = self.X
-        y = self.y
-        LOGGER.info('TUNNING MODEL')
+        LOGGER.info('TUNNING MODEL ...')
         best_params_model = {}
         model_grid = None
 
@@ -145,14 +149,23 @@ class Classification(object):
         if estimator is None:
             if len(self.estimator.keys()) > 0:
                 for name_model, estimator in self.estimator.items():
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
+                    if name_model in estimator_params.keys():
+                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
+                    else:
+                        estimator_model[name_model] = estimator
 
             else:
                 for name_model in ModelFactory.name_registry:
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
+                    if name_model in estimator_params.keys():
+                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
+                    else:
+                        estimator_model[name_model] = ModelFactory.create_executor(name_model)
         else:
             for name_model in estimator:
-                estimator_model[name_model] = ModelFactory.create_executor(name_model)
+                if name_model in estimator_params.keys():
+                    estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
+                else:
+                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
 
         # update estimator_params
         for name_model, params in estimator_params.items():
@@ -238,7 +251,7 @@ class Classification(object):
 
 
 
-            model_grid.fit(X, y)
+            model_grid.fit(self.X, self.y)
             best_params = model_grid.best_params_
             best_params_model[name_model] = best_params
 
@@ -258,8 +271,6 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-        X = self.X
-        y = self.y
         LOGGER.info('ensemble models')
 
         if sort is None:
@@ -310,8 +321,8 @@ class Classification(object):
                                                                 random_state=0)
 
             scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                                            X = X,
-                                                            y = y,
+                                                            X = self.X,
+                                                            y = self.y,
                                                             scoring=scoring,
                                                             cv = cv,
                                                             n_jobs = n_jobs,
@@ -338,8 +349,6 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-        X = self.X
-        y = self.y
         LOGGER.info('VOTING MODELs')
 
         if sort is None:
@@ -400,8 +409,8 @@ class Classification(object):
             estimator = VotingClassifier(estimators= model_voting,
                                      voting='hard')
             scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                                X = X,
-                                                y = y,
+                                                X = self.X,
+                                                y = self.y,
                                                 scoring=scoring,
                                                 cv = cv,
                                                 n_jobs = n_jobs,
@@ -430,10 +439,6 @@ class Classification(object):
                        verbose = True,
                        estimator_params = {},
                        n_jobs = -1):
-        X = self.X
-        y = self.y
-        LOGGER.info('VOTING MODELs')
-
         if sort is None:
             sort = scoring[0]
         score_models = {}
@@ -479,8 +484,8 @@ class Classification(object):
                                        n_jobs= n_jobs,
                                        verbose=verbose)
         scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                            X = X,
-                                            y = y,
+                                            X = self.X,
+                                            y = self.y,
                                             scoring=scoring,
                                             cv = cv,
                                             n_jobs = n_jobs,
@@ -552,75 +557,244 @@ class Classification(object):
                 LOGGER.warn(f'{estimator.__class__.__name__} not function predict')
         y_pred = scipy.stats.mode(np.vstack(preds), axis = 0)[0][0].tolist()
         return y_pred
+    def feature_visualizer(self, classes = None, params = {}):
+        if os.path.isdir(os.path.join(os.getcwd(), 'visualizer/')) == False:
+            os.makedirs(os.path.join(os.getcwd(), 'visualizer/'))
+        if classes is None:
+            classes = pd.value_counts(self.y.values.flatten()).index.tolist()
+        try:
+            LOGGER.info('Visualizer RadViz')
+            visualizer = RadViz(classes = classes, features = self.X.columns.tolist())
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = RadViz(**params[visualizer.__class__.__name__])
+            visualizer.fit(self.X, self.y)
+            visualizer.transform(self.X)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR RadViz')
+        try:
+            LOGGER.info('Visualizer Rank1D')
+            visualizer = Rank1D()
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = Rank1D(**params[visualizer.__class__.__name__])
+            visualizer.fit(self.X, self.y)
+            visualizer.transform(self.X)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR Rank1D')
+        try:
+            LOGGER.info('Visualizer Rank2D')
+            visualizer = Rank2D()
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = Rank2D(**params[visualizer.__class__.__name__])
+            visualizer.fit(self.X, self.y)
+            visualizer.transform(self.X)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR Rank2D')
+        try:
+            LOGGER.info('Visualizer ParallelCoordinates')
+            visualizer = ParallelCoordinates(classes = classes, features = self.X.columns.tolist(), shuffle=True)
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = ParallelCoordinates(**params[visualizer.__class__.__name__])
+            visualizer.fit_transform(self.X, self.y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR ParallelCoordinates')
+        # try:
+        LOGGER.info('Visualizer PCA')
+        visualizer = PCA(classes = classes, scale = True)
+        if visualizer.__class__.__name__ in params.keys():
+            visualizer = PCA(**params[visualizer.__class__.__name__])
+        visualizer.fit_transform(self.X, self.y)
+        visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+        plt.cla()
+        # except:
+        #     LOGGER.warn('ERROR PCA')
+        try:
+            LOGGER.info('Visualizer PCA Biplot')
+            visualizer = PCA(classes = classes, scale = True, proj_features = True)
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = PCA(**params[visualizer.__class__.__name__])
+            visualizer.fit_transform(self.X, self.y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR PCA 3D')
+        try:
+            LOGGER.info('Visualizer Manifold')
+            visualizer = Manifold(classes = classes)
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = Manifold(**params[visualizer.__class__.__name__])
+            visualizer.fit_transform(self.X, self.y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR Manifold')
 
-
-    def plot_model(self):
+    def target_visualizer(self, classes = None, params = {'BalancedBinningReference': {'bins': 5}}):
+        LOGGER.info('Initializing target visualizer')
+        if os.path.isdir(os.path.join(os.getcwd(), 'visualizer/')) == False:
+            os.makedirs(os.path.join(os.getcwd(), 'visualizer/'))
+        visualizers = []
+        y = self.y.squeeze()
+        try:
+            LOGGER.info('Visualizer BalancedBinningReference')
+            visualizer = BalancedBinningReference()
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = BalancedBinningReference(**params[visualizer.__class__.__name__])
+            visualizer.fit(y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR BalancedBinning')
+        try:
+            LOGGER.info('Visualizer CLassBalance')
+            visualizer = ClassBalance()
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = ClassBalance(**params[visualizer.__class__.__name__])
+            visualizer.fit(y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR ClassBalance')
+        try:
+            LOGGER.info('Visualizer Feature Correlation')
+            visualizer = FeatureCorrelation(method = 'mutual_info-classification', feature_names = self.X.columns.tolist(), sort = True)
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = FeatureCorrelation(**params[visualizer.__class__.__name__])
+            visualizer.fit(self.X, y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR FeatureCorrelation')
+    def evaluate_visualizer(self, classes = None, params = {}):
         LOGGER.info('Initializing plot model')
-        size_plot = len(self.estimator.items())
-        # fig, axes = plt.subplots(size_plot*6, figsize=(20, 20*size_plot*6))
-        if os.path.isdir(os.path.join(os.getcwd(), 'viz')) == False:
-            os.makedirs(os.path.join(os.getcwd(), 'viz/'))
-        classes = pd.value_counts(self.y.values.flatten()).index.tolist()
-        print('classes: ', classes)
-        index = 0
+        if os.path.isdir(os.path.join(os.getcwd(), 'visualizer/')) == False:
+            os.makedirs(os.path.join(os.getcwd(), 'visualizer/'))
+        if classes is None:
+            classes = pd.value_counts(self.y.values.flatten()).index.tolist()
+        visualizers = []
         for idx, (name_model, estimator) in enumerate(self.estimator.items()):
             X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(self.X, self.y, test_size = 0.2, stratify=self.y, random_state = 24)
             try:
-                viz = ClassificationReport(model = estimator, classes=classes)
-                index +=1
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer ClassificationReport')
+                visualizer = ClassificationReport(model = estimator, classes=classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = ClassificationReport(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                pass
+                LOGGER.warn('ERROR ClassificationReport')
             try:
-                viz = ConfusionMatrix(model = estimator, classes=classes)
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer ConfusionMatrix')
+                visualizer = ConfusionMatrix(model = estimator, classes=classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = ConfusionMatrix(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                pass
+                LOGGER.warn('ERROR ConfusionMatrix')
             try:
-                viz = ROCAUC(model = estimator,classes=classes)
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer ROCAUC')
+                visualizer = ROCAUC(model = estimator,classes=classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = ROCAUC(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                pass
+                LOGGER.warn('ERROR ROCAUC')
             try:
-                viz = PrecisionRecallCurve(model = estimator, per_class=True, classes=classes)
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer PrecisionRecallCurve')
+                visualizer = PrecisionRecallCurve(model = estimator, per_class=True, classes=classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = PrecisionRecallCurve(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                pass
+                LOGGER.warn('ERROR PrecisionRecallCurve')
             try:
-                viz = ClassPredictionError(model = estimator, classes = classes)
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer ClassPredictionError')
+                visualizer = ClassPredictionError(model = estimator, classes = classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = ClassPredictionError(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                LOGGER.warn(f'{viz.__class__.__name__} ERROR')
+                LOGGER.warn('ERROR ClassPredictionError')
             try:
-                viz = DiscriminationThreshold(model = estimator, classes = classes)
-                viz.fit(X_train, y_train)
-                viz.score(X_test, y_test)
-                viz.show(outpath=os.path.join(os.getcwd(), f'viz/{viz.__class__.__name__}_{estimator.__class__.__name__}_{index}.png'), clear_figure=True)
-                index = index + 1
+                LOGGER.info('Visualizer Discrimination Threshold')
+                visualizer = DiscriminationThreshold(model = estimator, classes = classes)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = DiscriminationThreshold(**params[visualizer.__class__.__name__])
+                visualizer.fit(X_train, y_train)
+                visualizer.score(X_test, y_test)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f'visualizer/{visualizer.__class__.__name__}_{estimator.__class__.__name__}.png'))
+                plt.cla()
             except:
-                LOGGER.warn(f'{viz.__class__.__name__} ERROR')
+                LOGGER.warn('ERROR Discrimination Threshold')
+    def model_selection_visualizer(self, classes = None, params = {}):
 
+        for idx, (name_model, estimator) in enumerate(self.estimator.items()):
+            cv = StratifiedKFold(n_splits=2, random_state=42)
+            try:
+                if visualizer.__class__.__name__ in params.keys():
+                    LOGGER.info('Visualizer ValidationCurve')
+                    visualizer = ValidationCurve(model = estimator, cv = cv, **params[visualizer.__class__.__name__])
+                    visualizer.fit(self.X, self.y)
+                    visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+                    plt.cla()
+            except:
+                LOGGER.warn('ERROR ValidationCurve')
+            try:
+                LOGGER.info('Visualizer LearningCurve')
+                visualizer = CVScores(model = estimator, cv = cv)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = LearningCurve(**params[visualizer.__class__.__name__])
+                visualizer.fit(self.X, self.y)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+                plt.cla()
+            except:
+                LOGGER.warn('ERROR LearningCurve')
+            try:
+                LOGGER.info('Visualizer CVScores')
+                visualizer = CVScores(model = estimator, cv = cv)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = CVScores(**params[visualizer.__class__.__name__])
+                visualizer.fit(self.X, self.y)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+                plt.cla()
+            except:
+                LOGGER.warn('ERROR CVScores')
+            try:
+                LOGGER.info('Visualizer FeatureImportances')
+                visualizer = FeatureImportances(estimator)
+                if visualizer.__class__.__name__ in params.keys():
+                    visualizer = FeatureImportances(**params[visualizer.__class__.__name__])
+                visualizer.fit(self.X, self.y)
+                visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+                plt.cla()
+            except:
+                LOGGER.warn('ERROR FeatureImportances')
     def report_classification(self, sort_by=None):
         scores = pd.DataFrame.from_dict(self.metrics, orient = 'index')
         if sort_by is not None:
             scores = scores.sort_values(by = sort_by, ascending=False)
         return scores
-
 
 
 
