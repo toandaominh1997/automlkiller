@@ -605,16 +605,16 @@ class AUTOML(object):
             plt.cla()
         except:
             LOGGER.warn('ERROR ParallelCoordinates')
-        # try:
-        LOGGER.info('Visualizer PCA')
-        visualizer = PCA(classes = classes, scale = True)
-        if visualizer.__class__.__name__ in params.keys():
-            visualizer = PCA(**params[visualizer.__class__.__name__])
-        visualizer.fit_transform(self.X, self.y)
-        visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
-        plt.cla()
-        # except:
-        #     LOGGER.warn('ERROR PCA')
+        try:
+            LOGGER.info('Visualizer PCA 3D')
+            visualizer = PCA(classes = classes, scale = True, projection = 3)
+            if visualizer.__class__.__name__ in params.keys():
+                visualizer = PCA(**params[visualizer.__class__.__name__])
+            visualizer.fit_transform(self.X, self.y)
+            visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
+            plt.cla()
+        except:
+            LOGGER.warn('ERROR PCA 3D')
         try:
             LOGGER.info('Visualizer PCA Biplot')
             visualizer = PCA(classes = classes, scale = True, proj_features = True)
@@ -624,7 +624,7 @@ class AUTOML(object):
             visualizer.show(outpath = os.path.join(os.getcwd(), f"visualizer/{visualizer.__class__.__name__}.png"))
             plt.cla()
         except:
-            LOGGER.warn('ERROR PCA 3D')
+            LOGGER.warn('ERROR PCA Biplot')
         try:
             LOGGER.info('Visualizer Manifold')
             visualizer = Manifold(classes = classes)
