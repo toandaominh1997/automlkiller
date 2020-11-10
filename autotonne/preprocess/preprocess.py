@@ -49,23 +49,24 @@ class DataTypes(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         LOGGER.info('FIT DATATYPE')
         X = X.copy()
+        dataset = X
         if y is not None:
             y = y.copy()
 
         X.columns = [str(col) for col in X.columns]
         X.replace([np.inf, -np.inf], np.NaN, inplace=True)
         # remove columns with duplicate name
-        X = X.loc[:, ~X.columns.duplicated()]
+        # X = X.loc[:, ~X.columns.duplicated()]
         # remove NAs
-        X.dropna(axis = 0, how = 'all', inplace = True)
-        X.dropna(axis = 1, how = 'all', inplace = True)
+        # X.dropna(axis = 0, how = 'all', inplace = True)
+        # X.dropna(axis = 1, how = 'all', inplace = True)
 
 
         for col in X.select_dtypes(include=['object']).columns:
             try:
                 X[col] = X[col].astype("int64")
             except:
-                None
+                continue
         for col in X.select_dtypes(include=['object']).columns:
             try:
                 X[col] = pd.to_datatime(X[col], infer_datetime_format = True, utc = False, errors = 'raise')
@@ -86,41 +87,41 @@ class DataTypes(BaseEstimator, TransformerMixin):
             if (count_float == 0) and (X[col].nunique() <= 20) and (nan_count > 0):
                 X[col] = X[col].astype("object")
 
-            # if column is int and unique counts are more than two
-            for col in X.select_dtypes(include = ["int64"]).columns:
-                if X[col].nunique() <= 20:
-                    X[col] = X[col].apply(self.str_if_not_null)
-                else:
-                    X[col] = X[col].astype("float32")
-            for col in X.select_dtypes(include=['float32']).columns:
-                if X[col].nunique() == 2:
-                    X[col] = X[col].apply(self.str_if_not_null)
+        # if column is int and unique counts are more than two
+        for col in X.select_dtypes(include = ["int64"]).columns:
+            if X[col].nunique() <= 5:
+                X[col] = X[col].apply(self.str_if_not_null)
+            else:
+                X[col] = dataset[col].astype("float32")
+        for col in X.select_dtypes(include=['float32']).columns:
+            if X[col].nunique() == 2:
+                X[col] = X[col].apply(self.str_if_not_null)
 
-            for col in self.numeric_columns:
-                try:
-                    X[col] = X[col].astype("float32")
-                except:
-                    X[col] = X[col].astype(self.str_if_not_null)
+        for col in self.numeric_columns:
+            try:
+                X[col] = dataset[col].astype("float32")
+            except:
+                X[col] = dataset[col].astype(self.str_if_not_null)
 
-            for col in self.categorical_columns:
-                try:
-                    X[col] = X[col].apply(self.str_if_not_null)
-                except:
-                    continue
+        for col in self.categorical_columns:
+            try:
+                X[col] = dataset[col].apply(self.str_if_not_null)
+            except:
+                X[col] = dataset[col].astype(self.str_if_not_null)
 
-            for col in self.time_columns:
-                try:
-                    X[col] = pd.to_datetime(X[col], infer_datetime_format=True, utc = False, errors = "raise")
-                except:
-                    continue
-            for col in X.select_dtypes(include=["datetime64"]).columns:
-                X[col] = X[col].astype("datetime64[ns]")
-            self.learned_dtypes = X.dtypes
+        for col in self.time_columns:
+            try:
+                X[col] = pd.to_datetime(X[col], infer_datetime_format=True, utc = False, errors = "raise")
+            except:
+                X[col] = pd.to_datetime(dataset[col], infer_datetime_format=True, utc = False, errors = "raise")
+        for col in X.select_dtypes(include=["datetime64"]).columns:
+            X[col] = X[col].astype("datetime64[ns]")
+        self.learned_dtypes = X.dtypes
 
-            X = X.replace([np.inf, -np.inf], np.NaN).astype(self.learned_dtypes)
+        X = X.replace([np.inf, -np.inf], np.NaN).astype(self.learned_dtypes)
 
-            self.final_columns = X.columns.tolist()
-            return self
+        self.final_columns = X.columns.tolist()
+        return self
 
     def transform(self, X, y = None):
         LOGGER.info('TRANSFORM DATATYPE')
