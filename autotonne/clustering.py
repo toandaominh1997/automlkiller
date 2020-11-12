@@ -22,23 +22,30 @@ from autotonne.utils.distributions import get_optuna_distributions
 from autotonne.utils import LOGGER, can_early_stop
 class Clustering(object):
     def __init__(self,
-                 preprocess: bool = True,
-                 **kwargs
-                 ):
+                X, 
+                preprocess: bool = True,
+                **kwargs
+                ):
         super(Clustering, self).__init__()
         self.preprocess = preprocess
         if self.preprocess == True:
             self.preprocessor = Preprocess(**kwargs)
+            X, _ = self.preprocessor.fit_transform(X, None)
+        self.X = X
         self.estimator = {}
+        self.model = {}
+        self.metrics = {}
+        self.estimator_params = {}
 
     def create_model(self,
                       X,
                       num_clusters,
                       estimator,
                       fit_params = {},
+                      estimator_params = {},
                       n_jobs = -1,
                       verbose = False,
-                      estimator_params = {}):
+                      ):
         """
         fit_kwargs: dict, default = {} (empty dict)
             Dictionary of arguments passed to the fit method of the model.
