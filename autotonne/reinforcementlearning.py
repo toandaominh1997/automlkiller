@@ -6,7 +6,6 @@ from autotonne.utils import LOGGER
 
 
 class AUTORL(object):
-
     def __init__(self,
                  config,
                  env,
