@@ -44,7 +44,7 @@ if __name__ =='__main__':
         env = SimpleCorridor,
         env_config = {'corridor_length': 5}
     )
-    autorl.create_model(estimator = ['rl-ppo'])
+    autorl.create_model(estimator = ['rl-dreamer'])
     autorl.report_rl()
 
 

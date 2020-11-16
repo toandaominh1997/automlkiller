@@ -4,25 +4,25 @@ import ray
 from ray import tune
 
 from autotonne.models.model_factory import ModelFactory
-from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.agents.a2c import A2CTrainer
 from ray.tune.logger import pretty_print
 from tqdm.auto import tqdm, trange
 import pickle
 from autotonne.utils import LOGGER
 
 
-@ModelFactory.register('rl-ppo')
-class PPOContainer(object):
+@ModelFactory.register('rl-a2c')
+class A2CContainer(object):
     def __init__(self, **kwargs):
         super().__init__()
-        self.estimator = PPOrl(**kwargs)
+        self.estimator = DDPPOrl(**kwargs)
 
-class PPOrl(object):
+class A3Crl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config
         self.env = env(env_config)
-        self.agent = PPOTrainer(config = self.config, env = env)
+        self.agent = A2CTrainer(config = self.config, env = env)
 
 
     def fit(self, checkpoint = None):
@@ -53,19 +53,3 @@ class PPOrl(object):
             episode_reward += reward
         results = {'action': actions, 'reward': episode_reward}
         return results
-
-if __name__ =='__main__':
-    config = {
-        "vf_share_layers": True,
-        "lr": 1e-3,  # try different lrs
-        "num_workers": 8,  # parallelism
-        "framework": "torch",
-        "rollout_fragment_length": 10,
-    }
-    ray.init()
-    rl = PPOrl(config = config, env = SimpleCorridor, env_config = {'corridor_length': 5})
-    env = SimpleCorridor({'corridor_length': 5})
-    rl.fit(checkpoint = './rllib.pkl')
-    reward = rl.predict(checkpoint = './rllib.pkl')
-    print('total_reward: ', reward)
-
