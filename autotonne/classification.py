@@ -21,6 +21,8 @@ from ray.tune.sklearn import TuneGridSearchCV
 from ray.tune.sklearn import TuneSearchCV
 
 # visualization
+import tensorflow as tf
+from torch.utils.tensorboard import SummaryWriter
 from yellowbrick.model_selection import *
 from yellowbrick.features import *
 from yellowbrick.classifier import ClassificationReport, ConfusionMatrix, ROCAUC, PrecisionRecallCurve, ClassPredictionError, DiscriminationThreshold
@@ -30,6 +32,10 @@ import matplotlib.pyplot as plt
 from autotonne.utils.distributions import get_optuna_distributions
 
 from autotonne.utils import LOGGER, can_early_stop
+
+# Writer will output to ./runs/ directory by default
+writer = SummaryWriter()
+
 class AUTOML(object):
     X = None
     y = None
@@ -127,6 +133,9 @@ class AUTOML(object):
                     if name_model not in self.metrics.keys():
                         self.metrics[name_model] = {}
                     self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+                    writer.add_hparams({'name_model': name_model, 'fold': i + 1},
+                                       {f'hparam/{key}': value}
+                                       )
         return self
 
     def tune_model(self,

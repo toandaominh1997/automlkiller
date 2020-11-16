@@ -12,17 +12,17 @@ from autotonne.utils import LOGGER
 
 
 @ModelFactory.register('rl-sac')
-class A2CContainer(object):
+class SACContainer(object):
     def __init__(self, **kwargs):
         super().__init__()
-        self.estimator = DDPPOrl(**kwargs)
+        self.estimator = SACrl(**kwargs)
 
-class A3Crl(object):
+class SACrl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config
         self.env = env(env_config)
-        self.agent = A2CTrainer(config = self.config, env = env)
+        self.agent = SACTrainer(config = self.config, env = env)
 
 
     def fit(self, checkpoint = None):

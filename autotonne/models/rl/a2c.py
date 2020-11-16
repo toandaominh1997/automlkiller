@@ -4,7 +4,7 @@ import ray
 from ray import tune
 
 from autotonne.models.model_factory import ModelFactory
-from ray.rllib.agents.a2c import A2CTrainer
+from ray.rllib.agents.a3c import A2CTrainer
 from ray.tune.logger import pretty_print
 from tqdm.auto import tqdm, trange
 import pickle
