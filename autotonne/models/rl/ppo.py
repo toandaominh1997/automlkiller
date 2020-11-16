@@ -1,60 +1,33 @@
+import os
 import ray
 from ray import tune
 
 import numpy as np
+from autotonne.models.model_factory import ModelFactory
 from ray.rllib.agents.ppo import PPOTrainer
 from ray.tune.logger import pretty_print
-import gym
-from gym.spaces import Discrete, Box
 from tqdm.auto import tqdm, trange
 import pickle
 from autotonne.utils import LOGGER
 
-class SimpleCorridor(gym.Env):
-    """Example of a custom env in which you have to walk down a corridor.
-    You can configure the length of the corridor via the env config."""
 
-    def __init__(self, config):
-        self.end_pos = config["corridor_length"]
-        self.cur_pos = 0
-        self.action_space = Discrete(2)
-        self.observation_space = Box(
-            0.0, self.end_pos, shape=(1, ), dtype=np.float32)
-
-    def reset(self):
-        self.cur_pos = 0
-        return [self.cur_pos]
-
-    def step(self, action):
-        assert action in [0, 1], action
-        if action == 0 and self.cur_pos > 0:
-            self.cur_pos -= 1
-        elif action == 1:
-            self.cur_pos += 1
-        done = self.cur_pos >= self.end_pos
-        return [self.cur_pos], 1.0 if done else -0.1, done, {}
-
-
+@ModelFactory.register('rl-ppo')
 class PPOContainer(object):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
+        self.estimator = PPOrl(**kwargs)
 
-        self.estimator = None
-
-class PPOrl():
+class PPOrl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config
         self.env = env(env_config)
         self.agent = PPOTrainer(config = self.config, env = env)
 
-        self.stop = {
-            "training_iteration": 50,
-            "timesteps_total": 1000000,
-            "episode_reward_mean": 0.1,
-        }
 
     def fit(self, checkpoint = None):
+        if checkpoint is None:
+            checkpoint = os.path.join(os.getcwd(), 'data/checkpoint_rl.pkl')
         for idx in trange(5):
             result = self.agent.train()
             LOGGER.warning('result: ', result)
@@ -79,7 +52,7 @@ class PPOrl():
             actions.append(action)
             obs, reward, done, info = self.env.step(action)
             episode_reward += reward
-        results = {'action': actions, 'episode_reward': episode_reward}
+        results = {'action': actions, 'reward': episode_reward}
         return results
 
 if __name__ =='__main__':
