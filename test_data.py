@@ -38,7 +38,7 @@ if __name__ =='__main__':
     obj.create_model(estimator=['classification-lgbmclassifier',
                                 # 'classification-kneighborsclassifier',
                                 # 'classification-logisticregression',
-                                # 'classification-xgbclassifier',
+                                'classification-xgbclassifier',
                                 # 'classification-catboostclassifier',
                                 # 'classification-randomforestclassifier'
                                 ],
@@ -76,5 +76,3 @@ if __name__ =='__main__':
     # obj.feature_visualizer()
     # obj.target_visualizer()
     # obj.evaluate_visualizer()
-    scores = obj.report_classification()
-    print(scores)
