@@ -12,12 +12,12 @@ from autotonne.utils import LOGGER
 
 
 @ModelFactory.register('rl-ddpg')
-class DDPPOContainer(object):
+class DDPGContainer(object):
     def __init__(self, **kwargs):
         super().__init__()
-        self.estimator = DDPPOrl(**kwargs)
+        self.estimator = DDPGrl(**kwargs)
 
-class A3Crl(object):
+class DDPGrl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config

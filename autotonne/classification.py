@@ -21,6 +21,8 @@ from ray.tune.sklearn import TuneGridSearchCV
 from ray.tune.sklearn import TuneSearchCV
 
 # visualization
+import tensorflow as tf
+from torch.utils.tensorboard import SummaryWriter
 from yellowbrick.model_selection import *
 from yellowbrick.features import *
 from yellowbrick.classifier import ClassificationReport, ConfusionMatrix, ROCAUC, PrecisionRecallCurve, ClassPredictionError, DiscriminationThreshold
@@ -30,6 +32,12 @@ import matplotlib.pyplot as plt
 from autotonne.utils.distributions import get_optuna_distributions
 
 from autotonne.utils import LOGGER, can_early_stop
+
+from datetime import datetime
+# Writer will output to ./runs/ directory by default
+log_dir = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+writer = SummaryWriter(log_dir = os.path.join(os.getcwd(), 'runs', log_dir))
+
 class AUTOML(object):
     X = None
     y = None
@@ -122,11 +130,15 @@ class AUTOML(object):
             self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
             scores.pop('estimator')
             name_model = ''.join(name_model.split('-')[1:])
+
+            hparam_dict = {}
             for key, values in scores.items():
                 for i, value in enumerate(values):
-                    if name_model not in self.metrics.keys():
-                        self.metrics[name_model] = {}
-                    self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+                    if i not in hparam_dict.keys():
+                        hparam_dict[i] = {}
+                    hparam_dict[i][f'hparam/{key}'] = value
+            for fold in hparam_dict.keys():
+                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict[fold])
         return self
 
     def tune_model(self,

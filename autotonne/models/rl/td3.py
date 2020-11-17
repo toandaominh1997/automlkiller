@@ -15,9 +15,9 @@ from autotonne.utils import LOGGER
 class TD3Container(object):
     def __init__(self, **kwargs):
         super().__init__()
-        self.estimator = DDPPOrl(**kwargs)
+        self.estimator = TD3rl(**kwargs)
 
-class A3Crl(object):
+class TD3rl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config

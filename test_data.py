@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 
 if __name__ =='__main__':
-    df = pd.read_csv('./data.csv').head(5000)
+    df = pd.read_csv('./data.csv').head(1000)
     print('columns: ', df.columns)
     df = df.drop(columns = ['calendar_dim_id', 'user_id', 'Unnamed: 0'])
     X = df.drop(columns = ['has_order'])
@@ -38,12 +38,12 @@ if __name__ =='__main__':
     obj.create_model(estimator=['classification-lgbmclassifier',
                                 # 'classification-kneighborsclassifier',
                                 # 'classification-logisticregression',
-                                # 'classification-xgbclassifier',
+                                'classification-xgbclassifier',
                                 # 'classification-catboostclassifier',
                                 # 'classification-randomforestclassifier'
                                 ],
                      verbose = True,
-                     n_jobs = -1,
+                     n_jobs = 2,
                      cv = 2,
                      estimator_params = {
                                         # 'classification-kneighborsclassifier': {'n_jobs': 8},
@@ -73,6 +73,6 @@ if __name__ =='__main__':
     # result = obj.report_classification(sort_by = 'test_roc_auc_1fold')
     # print('result: ', result.T)
     # result.to_csv('./data/report.csv')
-    obj.feature_visualizer()
-    obj.target_visualizer()
-    obj.evaluate_visualizer()
+    # obj.feature_visualizer()
+    # obj.target_visualizer()
+    # obj.evaluate_visualizer()

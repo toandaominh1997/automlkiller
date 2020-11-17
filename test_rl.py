@@ -32,7 +32,7 @@ class SimpleCorridor(gym.Env):
 if __name__ =='__main__':
 
     config = {
-            "vf_share_layers": True,
+            # "vf_share_layers": True,
             "lr": 1e-3,  # try different lrs
             "num_workers": 8,  # parallelism
             "framework": "torch",
@@ -44,7 +44,7 @@ if __name__ =='__main__':
         env = SimpleCorridor,
         env_config = {'corridor_length': 5}
     )
-    autorl.create_model(estimator = ['rl-dreamer'])
+    autorl.create_model(estimator = ['rl-ppo'])
     autorl.report_rl()
 
 

@@ -11,13 +11,13 @@ import pickle
 from autotonne.utils import LOGGER
 
 
-@ModelFactory.register('rl-a2c')
-class A2CContainer(object):
+@ModelFactory.register('rl-dqn')
+class DQNContainer(object):
     def __init__(self, **kwargs):
         super().__init__()
         self.estimator = DDPPOrl(**kwargs)
 
-class A3Crl(object):
+class DQNrl(object):
     def __init__(self, env, env_config, config):
         self.config = config
         self.config['env_config'] = env_config

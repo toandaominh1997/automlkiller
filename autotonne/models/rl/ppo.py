@@ -25,13 +25,13 @@ class PPOrl(object):
         self.agent = PPOTrainer(config = self.config, env = env)
 
 
-    def fit(self, checkpoint = None):
+    def fit(self, checkpoint = None, n_iter = 2000, save_checkpoint = 10):
         if checkpoint is None:
             checkpoint = os.path.join(os.getcwd(), 'data/checkpoint_rl.pkl')
-        for idx in trange(5):
+        for idx in trange(n_iter):
             result = self.agent.train()
             LOGGER.warning('result: ', result)
-            if (idx + 1) % 5 == 0:
+            if (idx + 1) % save_checkpoint == 0:
                 LOGGER.warning('Save checkpoint at: {}'.format(idx + 1))
                 state = self.agent.save_to_object()
                 with open(checkpoint, 'wb') as fp:
