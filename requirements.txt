@@ -1,6 +1,10 @@
 numpy
 pandas
 matplotlib
+tensorflow
+tensorboard
+torch
+torchvision
 seaborn
 scikit-learn
 pyod
@@ -17,6 +21,5 @@ tune-sklearn
 yellowbrick
 google-cloud-bigquery
 google-cloud-storage
-
 annoy
 lightfm
