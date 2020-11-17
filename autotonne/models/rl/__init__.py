@@ -1,7 +1,7 @@
 from .a2c import A2CContainer
 from .a3c import A3CContainer
 from .appo import APPOContainer
-from .bc import BCContainer
+# from .bc import BCContainer
 from .ddpg import DDPGContainer
 from .ddppo import DDPPOContainer
 from .dqn import DQNContainer
