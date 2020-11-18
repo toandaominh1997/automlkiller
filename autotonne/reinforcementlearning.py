@@ -78,7 +78,7 @@ class AUTORL(object):
                 estimator = model.estimator
             except:
                 estimator = model
-            estimator.fit()
+            estimator.fit(*estimator_params)
             results = estimator.predict()
             name_model = ''.join(name_model.split('-')[1:])
 

@@ -131,14 +131,20 @@ class AUTOML(object):
             scores.pop('estimator')
             name_model = ''.join(name_model.split('-')[1:])
 
-            hparam_dict = {}
+            # hparam_dict = {}
+            # for key, values in scores.items():
+            #     for i, value in enumerate(values):
+            #         if i not in hparam_dict.keys():
+            #             hparam_dict[i] = {}
+            #         hparam_dict[i][f'hparam/{key}'] = value
+            # for fold in hparam_dict.keys():
+            #     writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict[fold])
             for key, values in scores.items():
                 for i, value in enumerate(values):
-                    if i not in hparam_dict.keys():
-                        hparam_dict[i] = {}
-                    hparam_dict[i][f'hparam/{key}'] = value
-            for fold in hparam_dict.keys():
-                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict[fold])
+                    if i not in self.metrics.keys():
+                        self.metrics[i] = {}
+                    self.metrics[i][name_model] = {key: value}
+        print('metric: ', self.metrics)
         return self
 
     def tune_model(self,
@@ -802,12 +808,14 @@ class AUTOML(object):
                 plt.cla()
             except:
                 LOGGER.warn('ERROR FeatureImportances')
-    def report_classification(self, sort_by=None):
-        scores = pd.DataFrame.from_dict(self.metrics, orient = 'index')
-        if sort_by is not None:
-            scores = scores.sort_values(by = sort_by, ascending=False)
-        return scores
-
+    def report_tensorboard(self):
+        hparam_dict = {}
+        for fold in self.metrics.keys():
+            for name_model, metric in self.metrics[fold].keys():
+                hparam_dict = {}
+                for key, value in metric.items():
+                    hparam_dict[f'hparam/{key}'] = value
+            writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
 
 
 
