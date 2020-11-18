@@ -1,9 +1,18 @@
 import torch
-
+import torch.nn as nn
+import pytorch_lightning as pl
 from .layers import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
 
 
-class DeepFactorizationMachineModel(torch.nn.Module):
+@ModelFactory.register('recommendation-dfm')
+class DeepFactorizationMachineModelContainer():
+    def __init__(self, **kwargs):
+
+        self.etimator = DeepFactorizationMachineModel(**kwargs)
+
+
+
+class DeepFactorizationMachineModel(pl.LightningModule):
     """
     A pytorch implementation of DeepFM.
 
@@ -26,3 +35,13 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         embed_x = self.embedding(x)
         x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         return torch.sigmoid(x.squeeze(1))
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        out = self.forward(x)
+        loss = nn.CrossEntropyLoss()(out, y)
+
+        return loss
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr = 1e-3)
+        return optimizer
