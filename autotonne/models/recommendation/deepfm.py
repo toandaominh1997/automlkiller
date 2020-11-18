@@ -33,14 +33,14 @@ class FMDataset(torch.utils.data.Dataset):
     def __len__(self):
         return 1000
     def __getitem__(self, index):
-        return torch.from_numpy(self.items[index]), torch.from_numpy(self.targets[index])
+        return torch.from_numpy(self.items[index])
 if __name__ == '__main__':
     dataset = FMDataset()
     field_dims = dataset.field_dims
     loader = DataLoader(dataset, batch_size = 4, num_workers=8)
     model = DeepFactorizationMachineModel(field_dims = [10],
                                       embed_dim = 40)
-    for field, target in loader:
+    for field in loader:
         out = model(field)
         print('out: ', out)
         print('shape: ', out.shape)

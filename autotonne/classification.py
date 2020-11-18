@@ -130,21 +130,13 @@ class AUTOML(object):
             self.estimator[name_model] = scores['estimator'][np.argmax(scores['test_'+sort])]
             scores.pop('estimator')
             name_model = ''.join(name_model.split('-')[1:])
-
-            # hparam_dict = {}
-            # for key, values in scores.items():
-            #     for i, value in enumerate(values):
-            #         if i not in hparam_dict.keys():
-            #             hparam_dict[i] = {}
-            #         hparam_dict[i][f'hparam/{key}'] = value
-            # for fold in hparam_dict.keys():
-            #     writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict[fold])
             for key, values in scores.items():
                 for i, value in enumerate(values):
                     if i not in self.metrics.keys():
                         self.metrics[i] = {}
-                    self.metrics[i][name_model] = {key: value}
-        print('metric: ', self.metrics)
+                    if name_model not in self.metrics[i].keys():
+                        self.metrics[i][name_model] = dict()
+                    self.metrics[i][name_model][key] = value
         return self
 
     def tune_model(self,
@@ -354,9 +346,11 @@ class AUTOML(object):
             name_model = ''.join(name_model.split('-')[1:])
             for key, values in scores.items():
                 for i, value in enumerate(values):
-                    if name_model not in self.metrics.keys():
-                        self.metrics[name_model] = {}
-                    self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+                    if i not in self.metrics.keys():
+                        self.metrics[i] = {}
+                    if name_model not in self.metrics[i].keys():
+                        self.metrics[i][name_model] = dict()
+                    self.metrics[i][name_model][key] = value
         return self
     def voting_model(self,
                      estimator = None,
@@ -442,9 +436,11 @@ class AUTOML(object):
         name_model = ''.join(name_model.split('-')[1:])
         for key, values in scores.items():
             for i, value in enumerate(values):
-                if name_model not in self.metrics.keys():
-                    self.metrics[name_model] = {}
-                self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+                if i not in self.metrics.keys():
+                    self.metrics[i] = {}
+                if name_model not in self.metrics[i].keys():
+                    self.metrics[i][name_model] = dict()
+                self.metrics[i][name_model][key] = value
         return self
 
     def stacking_model(self,
@@ -517,9 +513,11 @@ class AUTOML(object):
         name_model = ''.join(name_model.split('-')[1:])
         for key, values in scores.items():
             for i, value in enumerate(values):
-                if name_model not in self.metrics.keys():
-                    self.metrics[name_model] = {}
-                self.metrics[name_model][key + "_{}fold".format(i + 1)] = value
+                if i not in self.metrics.keys():
+                    self.metrics[i] = {}
+                if name_model not in self.metrics[i].keys():
+                    self.metrics[i][name_model] = dict()
+                self.metrics[i][name_model][key] = value
         return self
     def predict_proba_model(self,
                             X,
@@ -809,13 +807,12 @@ class AUTOML(object):
             except:
                 LOGGER.warn('ERROR FeatureImportances')
     def report_tensorboard(self):
-        hparam_dict = {}
         for fold in self.metrics.keys():
-            for name_model, metric in self.metrics[fold].keys():
+            for name_model, metric in self.metrics[fold].items():
                 hparam_dict = {}
                 for key, value in metric.items():
                     hparam_dict[f'hparam/{key}'] = value
-            writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
+                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
 
 
 
