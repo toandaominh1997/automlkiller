@@ -1,7 +1,10 @@
+import os
+import numpy as np
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
+from torch.utils.data import DataLoader
 from sklearn.datasets import make_classification
 from layers.layer import FactorizationMachine, FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
 
@@ -20,12 +23,25 @@ class DeepFactorizationMachineModel(pl.LightningModule):
         x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         return torch.sigmoid(x.squeeze(1))
 
+class FMDataset(torch.utils.data.Dataset):
+    def __init__(self):
+        super().__init__()
+        self.items = np.random.randint(10, size=(1000, 20))
+        self.targets = np.random.randn(1000, 10)
+        self.field_dims = np.max(self.items, axis = 0) + 1
+
+    def __len__(self):
+        return 1000
+    def __getitem__(self, index):
+        return torch.from_numpy(self.items[index]), torch.from_numpy(self.targets[index])
 if __name__ == '__main__':
-    X, y = make_classification(1000, 40)
-    inputs = torch.from_numpy(X)
-    print('inputs: ', inputs.size())
-    model = DeepFactorizationMachineModel(field_dims = [40],
-                                          embed_dim = 40,
-                                          mlp_dims = 40,
-                                          dropout = 0.5)
-    out = model(inputs)
+    dataset = FMDataset()
+    field_dims = dataset.field_dims
+    loader = DataLoader(dataset, batch_size = 4, num_workers=8)
+    model = DeepFactorizationMachineModel(field_dims = [10],
+                                      embed_dim = 40)
+    for field, target in loader:
+        out = model(field)
+        print('out: ', out)
+        print('shape: ', out.shape)
+        break
