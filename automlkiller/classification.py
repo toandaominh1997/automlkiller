@@ -11,7 +11,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.ensemble import BaggingClassifier, AdaBoostClassifier, VotingClassifier, StackingClassifier
 
-from automlkiller.preprocessor import Preprocess
+from automlkiller.preprocessor import Preprocessor
 from automlkiller.models.model_factory import ModelFactory
 from automlkiller.models.classification import *
 
@@ -50,7 +50,7 @@ class AUTOML(object):
         super(AUTOML, self).__init__()
         self.preprocess = preprocess
         if self.preprocess == True:
-            self.preprocessor = Preprocess(**kwargs)
+            self.preprocessor = Preprocessor(**kwargs)
         if self.preprocess == True:
             X, y = self.preprocessor.fit_transform(X, y)
         X = pd.DataFrame(X).reset_index(drop=True)
