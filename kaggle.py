@@ -7,7 +7,7 @@ from sklearn.impute import SimpleImputer
 from pandarallel import pandarallel
 pandarallel.initialize()
 
-df = pd.read_csv('/home/tonne/code/autotonne/data/riiid/train.csv', nrows= 1000000)
+df = pd.read_csv('/home/tonne/code/automlkiller/data/riiid/train.csv', nrows= 1000000)
 print('shape: ', df.shape)
 from sklearn.model_selection import train_test_split
 train, test = train_test_split(df, test_size=0.2, stratify = df['answered_correctly'])

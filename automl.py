@@ -2,8 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 import warnings
-from autotonne.classification import Classification
-from autotonne.utils import save_model, load_model
+from automlkiller.classification import Classification
+from automlkiller.utils import save_model, load_model
 from cloudservice import CloudService
 
 

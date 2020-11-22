@@ -2,7 +2,7 @@ import numpy as np
 import gym
 from gym.spaces import Discrete, Box
 
-from autotonne.reinforcementlearning import AUTORL
+from automlkiller.reinforcementlearning import AUTORL
 
 
 class SimpleCorridor(gym.Env):

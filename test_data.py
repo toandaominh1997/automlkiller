@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import lightgbm
 import warnings
-from autotonne.classification import AUTOML
-from autotonne.utils import save_model, load_model
+from automlkiller.classification import AUTOML
+from automlkiller.utils import save_model, load_model
 from sklearn.datasets import make_classification, load_iris
 import sklearn
 warnings.filterwarnings('ignore')

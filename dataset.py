@@ -1,5 +1,5 @@
 import os
-from autotonne.utils import CloudService
+from automlkiller.utils import CloudService
 
 with open(os.path.join(os.getcwd(), 'query.sql')) as fp:
     query_string = fp.read()
