@@ -7,9 +7,9 @@ from automlkiller.preprocess.preprocess import *
 from automlkiller.preprocess.preprocee_factory import PreprocessFactory
 from automlkiller.utils import LOGGER
 
-class Preprocess(object):
+class Preprocessor(object):
     def __init__(self, **kwargs):
-        super(Preprocess, self).__init__()
+        super(Preprocessor, self).__init__()
         self.preprocess_objs = []
         for name_registry, preprocess_param in kwargs.items():
             name_registry = '-'.join(['preprocess', name_registry])
