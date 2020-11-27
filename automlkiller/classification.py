@@ -58,32 +58,9 @@ class AUTOML(object):
         self.X = X
         self.y = y
         self.estimator = {}
-        self.model = {}
         self.metrics = {}
         self.estimator_params = {}
-
-    def create_model(self,
-                      estimator,
-                      cv: int  = 2,
-                      scoring = ['roc_auc_ovr'],
-                      sort = None,
-                      fit_params = {},
-                      estimator_params = {},
-                      n_jobs = -1,
-                      verbose = False
-                     ):
-        """
-        fit_kwargs: dict, default = {} (empty dict)
-            Dictionary of arguments passed to the fit method of the model.
-        **kwargs:
-            Additional keyword arguments to pass to the estimator.
-        """
-        X = self.X
-        y = self.y
-        if sort is None:
-            sort = scoring[0]
-        score_models = {}
-
+    def choose_model(self, estimator, estimator_params, fit_params):
         estimator_model = {}
         if estimator is None:
             if len(self.estimator.keys()) > 0:
@@ -109,7 +86,27 @@ class AUTOML(object):
         # update estimator_params
         for name_model, params in estimator_params.items():
             self.estimator_params[name_model] = params
+        return estimator_model
 
+    def create_model(self,
+                      estimator = None,
+                      cv: int  = 2,
+                      scoring = ['roc_auc_ovr'],
+                      sort = None,
+                      fit_params = {},
+                      estimator_params = {},
+                      n_jobs = -1,
+                      verbose = False
+                     ):
+        """
+        fit_kwargs: dict, default = {} (empty dict)
+            Dictionary of arguments passed to the fit method of the model.
+        **kwargs:
+            Additional keyword arguments to pass to the estimator.
+        """
+        if sort is None:
+            sort = scoring[0]
+        estimator_model = self.choose_model(estimator = estimator, estimator_params = estimator_params, fit_params=fit_params)
         for name_model, model in estimator_model.items():
             try:
                 estimator = model.estimator
@@ -117,8 +114,8 @@ class AUTOML(object):
                 estimator = model
 
             scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                                            X = X,
-                                                            y = y,
+                                                            X = self.X,
+                                                            y = self.y,
                                                             scoring=scoring,
                                                             cv = cv,
                                                             n_jobs = n_jobs,
@@ -278,40 +275,14 @@ class AUTOML(object):
                        scoring = ['roc_auc_ovr'],
                        sort = None,
                        fit_params = {},
-                       verbose = True,
                        estimator_params = {},
-                       n_jobs = -1):
+                       verbose = True,
+                       n_jobs = -1
+                       ):
         LOGGER.info('ensemble models')
-
         if sort is None:
             sort = scoring[0]
-        score_models = {}
-
-        estimator_model = {}
-        if estimator is None:
-            if len(self.estimator.keys()) > 0:
-                for name_model, estimator in self.estimator.items():
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = estimator
-
-            else:
-                for name_model in ModelFactory.name_registry:
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model)
-        else:
-            for name_model in estimator:
-                if name_model in estimator_params.keys():
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                else:
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
-
-        # update estimator_params
-        for name_model, params in estimator_params.items():
-            self.estimator_params[name_model] = params
+        estimator_model = self.choose_model(estimator = estimator, estimator_params = estimator_params, fit_params=fit_params)
 
         for name_model, model in estimator_model.items():
             try:
@@ -357,41 +328,15 @@ class AUTOML(object):
                        cv = 2,
                        scoring = ['roc_auc_ovr'],
                        sort = None,
+                       estimator_params = {},
                        fit_params = {},
                        verbose = True,
-                       estimator_params = {},
                        n_jobs = -1):
         LOGGER.info('VOTING MODELs')
 
         if sort is None:
             sort = scoring[0]
-        score_models = {}
-
-        estimator_model = {}
-        if estimator is None:
-            if len(self.estimator.keys()) > 0:
-                for name_model, estimator in self.estimator.items():
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = estimator
-
-            else:
-                for name_model in ModelFactory.name_registry:
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model)
-        else:
-            for name_model in estimator:
-                if name_model in estimator_params.keys():
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                else:
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
-
-        # update estimator_params
-        for name_model, params in estimator_params.items():
-            self.estimator_params[name_model] = params
+        estimator_model = self.choose_model(estimator = estimator, estimator_params = estimator_params, fit_params=fit_params)
 
         model_voting = []
         for name_model, model in estimator_model.items():
@@ -455,33 +400,7 @@ class AUTOML(object):
                        n_jobs = -1):
         if sort is None:
             sort = scoring[0]
-        score_models = {}
-
-        estimator_model = {}
-        if estimator is None:
-            if len(self.estimator.keys()) > 0:
-                for name_model, estimator in self.estimator.items():
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = estimator
-
-            else:
-                for name_model in ModelFactory.name_registry:
-                    if name_model in estimator_params.keys():
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                    else:
-                        estimator_model[name_model] = ModelFactory.create_executor(name_model)
-        else:
-            for name_model in estimator:
-                if name_model in estimator_params.keys():
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model, **estimator_params[name_model])
-                else:
-                    estimator_model[name_model] = ModelFactory.create_executor(name_model)
-
-        # update estimator_params
-        for name_model, params in estimator_params.items():
-            self.estimator_params[name_model] = params
+        estimator_model = self.choose_model(estimator = estimator, estimator_params = estimator_params, fit_params=fit_params)
 
         model_stacking = []
         for name_model, model in estimator_model.items():
@@ -548,11 +467,9 @@ class AUTOML(object):
 
 
     def predict_model(self,
-                    X,
-                    estimator = None,
-                      probability_threshold = None,
-                      rountd = 4,
-                      verbose = False
+                        X,
+                        estimator = None,
+                        verbose = False
                       ):
         X = X.copy()
         X = self.preprocessor.transform(X)
@@ -573,6 +490,14 @@ class AUTOML(object):
                 LOGGER.warn(f'{estimator.__class__.__name__} not function predict')
         y_pred = scipy.stats.mode(np.vstack(preds), axis = 0)[0][0].tolist()
         return y_pred
+    def report_tensorboard(self):
+        for fold in self.metrics.keys():
+            for name_model, metric in self.metrics[fold].items():
+                hparam_dict = {}
+                for key, value in metric.items():
+                    hparam_dict[f'hparam/{key}'] = value
+                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
+
     def feature_visualizer(self, classes = None, params = {}):
         if os.path.isdir(os.path.join(os.getcwd(), 'visualizer/')) == False:
             os.makedirs(os.path.join(os.getcwd(), 'visualizer/'))
@@ -806,13 +731,5 @@ class AUTOML(object):
                 plt.cla()
             except:
                 LOGGER.warn('ERROR FeatureImportances')
-    def report_tensorboard(self):
-        for fold in self.metrics.keys():
-            for name_model, metric in self.metrics[fold].items():
-                hparam_dict = {}
-                for key, value in metric.items():
-                    hparam_dict[f'hparam/{key}'] = value
-                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
-
 
 

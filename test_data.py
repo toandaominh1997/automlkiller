@@ -37,7 +37,7 @@ if __name__ =='__main__':
                  )
     obj.create_model(estimator=['classification-lgbmclassifier',
                                 # 'classification-kneighborsclassifier',
-                                # 'classification-logisticregression',
+                                'classification-logisticregression',
                                 # 'classification-xgbclassifier',
                                 # 'classification-catboostclassifier',
                                 # 'classification-randomforestclassifier'
@@ -54,26 +54,7 @@ if __name__ =='__main__':
                                          },
                     scoring = ['accuracy', 'roc_auc', 'recall', 'precision', 'f1']
                      )
-    # estimator_params = obj.tune_model(estimator=['classification-lgbmclassifier',
-    #                             'classification-kneighborsclassifier',
-    #                             'classification-logisticregression',
-    #                             'classification-xgbclassifier',
-    #                             'classification-catboostclassifier',
-    #                             'classification-randomforestclassifier'
-    #                             ],
-    #                n_iter=10,
-    #                  verbose = True,
-    #                  n_jobs = -1
-    #                )
-    # print('PREPARE PREDICT MODEL')
-    # y_pred = obj.predict_model(X)
-    # print('y_pred: ', y_pred)
-    # y_pred_proba = obj.predict_proba_model(X)
-    # print('y_pred_proba: ', y_pred_proba)
-    # result = obj.report_classification(sort_by = 'test_roc_auc_1fold')
-    # print('result: ', result.T)
-    # result.to_csv('./data/report.csv')
-    # obj.feature_visualizer()
-    # obj.target_visualizer()
-    # obj.evaluate_visualizer()
+    obj.ensemble_model()
+    obj.voting_model(scoring = ['f1'])
+    obj.stacking_model()
     obj.report_tensorboard()
