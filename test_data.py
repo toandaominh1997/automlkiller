@@ -54,7 +54,7 @@ if __name__ =='__main__':
                                          },
                     scoring = ['accuracy', 'roc_auc', 'recall', 'precision', 'f1']
                      )
-    obj.ensemble_model()
-    obj.voting_model(scoring = ['f1'])
-    obj.stacking_model()
+    obj.ensemble_model(scoring = ['accuracy'])
+    obj.voting_model(scoring = ['accuracy'])
+    obj.stacking_model(scoring = ['accuracy'])
     obj.report_tensorboard()

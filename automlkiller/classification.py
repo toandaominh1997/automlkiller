@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from enum import Enum, auto
 import scipy
 import numpy as np
@@ -35,8 +36,6 @@ from automlkiller.utils import LOGGER, can_early_stop
 
 from datetime import datetime
 # Writer will output to ./runs/ directory by default
-log_dir = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-writer = SummaryWriter(log_dir = os.path.join(os.getcwd(), 'runs', log_dir))
 
 class AUTOML(object):
     X = None
@@ -60,6 +59,7 @@ class AUTOML(object):
         self.estimator = {}
         self.metrics = {}
         self.estimator_params = {}
+        self.writer = SummaryWriter(log_dir = Path.cwd().joinpath('runs', datetime.now().strftime("%Y-%m-%d_%H:%M:%S")))
     def choose_model(self, estimator, estimator_params, fit_params):
         estimator_model = {}
         if estimator is None:
@@ -351,8 +351,8 @@ class AUTOML(object):
             estimator = VotingClassifier(estimators= model_voting,
                                      voting='soft')
             scores = sklearn.model_selection.cross_validate(estimator = estimator,
-                                                X = X,
-                                                y = y,
+                                                X = self.X,
+                                                y = self.y,
                                                 scoring=scoring,
                                                 cv = cv,
                                                 n_jobs = n_jobs,
@@ -376,6 +376,7 @@ class AUTOML(object):
                                                 return_train_score = True,
                                                 return_estimator = True,
                                                 error_score=-1)
+        print('score voting: ', scores)
         self.estimator['classification-votingclassifer'] = scores['estimator'][np.argmax(scores['test_'+sort])]
         scores.pop('estimator')
         name_model = ''.join(name_model.split('-')[1:])
@@ -394,9 +395,9 @@ class AUTOML(object):
                        cv = 2,
                        scoring = ['roc_auc_ovr'],
                        sort = None,
+                       estimator_params = {},
                        fit_params = {},
                        verbose = True,
-                       estimator_params = {},
                        n_jobs = -1):
         if sort is None:
             sort = scoring[0]
@@ -496,7 +497,7 @@ class AUTOML(object):
                 hparam_dict = {}
                 for key, value in metric.items():
                     hparam_dict[f'hparam/{key}'] = value
-                writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
+                self.writer.add_hparams({'name_model': name_model, 'KFold': str(fold + 1)}, hparam_dict)
 
     def feature_visualizer(self, classes = None, params = {}):
         if os.path.isdir(os.path.join(os.getcwd(), 'visualizer/')) == False:
